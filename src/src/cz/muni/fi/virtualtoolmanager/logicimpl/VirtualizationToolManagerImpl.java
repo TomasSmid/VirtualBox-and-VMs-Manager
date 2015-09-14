@@ -15,7 +15,9 @@
  */
 package cz.muni.fi.virtualtoolmanager.logicimpl;
 
+import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
+import cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.CloneType;
@@ -27,7 +29,22 @@ import java.util.UUID;
  * @author Tomáš Šmíd
  */
 public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
-
+    
+    private final NativeVBoxAPIManager nativeVBoxAPIManager;
+    private final ConnectionManager connectionManager;
+    private final PhysicalMachine hostMachine;
+    
+    VirtualizationToolManagerImpl(PhysicalMachine hostMachine){
+        this(hostMachine, new NativeVBoxAPIManager(), new ConnectionManagerImpl());
+    }
+    
+    VirtualizationToolManagerImpl(PhysicalMachine hostMachine, NativeVBoxAPIManager nativeVBoxAPIManager,
+                                  ConnectionManager connectionManager){
+        this.hostMachine = hostMachine;
+        this.nativeVBoxAPIManager = nativeVBoxAPIManager;
+        this.connectionManager = connectionManager;
+    }
+    
     @Override
     public void registerVirtualMachine(String name) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.

@@ -72,7 +72,7 @@ public class NativeVBoxAPIManagerTest {
      * of all available virtual machines on the particular physical machine is
      * not already registered.
      */
-    /*@Test
+    @Test
     public void registerVirtualMachineIdealCase(){
         //physical machine on which should be virtual machine registered
         PhysicalMachine pm = new PMBuilder().build();
@@ -95,7 +95,7 @@ public class NativeVBoxAPIManagerTest {
      * This test tests that there cannot be registered virtual machine on physical
      * machine which is already registered on this physical machine.
      */
-    /*@Test
+    @Test
     public void registerAlreadyRegisteredVirtualMachine(){
         //physical machine on which should be virtual machine registered
         PhysicalMachine pm = new PMBuilder().build();
@@ -125,7 +125,7 @@ public class NativeVBoxAPIManagerTest {
      * is not present (its image (dvi)) in a default VM folder of the virtualization tool VirtualBox on
      * this physical machine.
      */
-    /*@Test
+    @Test
     public void registerNonexistentVirtualMachine(){
         //physical machine on which should be virtual machine registered
         PhysicalMachine pm = new PMBuilder().build();
@@ -153,7 +153,7 @@ public class NativeVBoxAPIManagerTest {
      * This test tests that if there suddenly appears network connection problem
      * then there will be invoked ConnectionFailureException exception.
      */
-    /*@Test
+    @Test
     public void registerVirtualMachineWithSuddenNetworkConnectionLoss(){
         //physical machine on which should be virtual machine registered
         PhysicalMachine pm = new PMBuilder().build();
@@ -172,18 +172,18 @@ public class NativeVBoxAPIManagerTest {
     
     /**
      * This test tests that there is returned the required virtual machine without
-     * any exception and error occurance when the method NativeVBoxAPIManager::getVirtualMachineById()
-     * is called with UUID which actually identify some virtual machine from the
-     * list of registered virtual machines.
+ any exception and error occurance when the method NativeVBoxAPIManager::getVirtualMachine()
+ is called with vmId which actually identify some virtual machine from the
+ list of registered virtual machines.
      */
-    /*@Test
+    @Test
     public void getVirtualMachineByIdIWithSomeMatch(){
         //represents host machine from which is virtual machine required
         PhysicalMachine pm = new PMBuilder().build();
         //represents virtual machine with all correct and expected values of its attributes 
         VirtualMachine expectedVM = new VMBuilder().build();
         //represents ID of required virtual machine
-        UUID uuid = expectedVM.getId();        
+        String vmId = expectedVM.getId().toString();        
         //represents mock object of type IMachine for better test control
         IMachine machineMocked = mock(IMachine.class);
         //represents mock object of type IGuestOSType for better test control
@@ -195,10 +195,10 @@ public class NativeVBoxAPIManagerTest {
         //is called in order to control returned values of its methods
         when(vbmMocked.getVBox()).thenReturn(vboxMocked);
         //mock object of type IMachine is returned when the method IVirtualBox::findMachine() is called
-        //with id of required virtual machine in order to control returned values of its methods
-        when(vboxMocked.findMachine(uuid.toString())).thenReturn(machineMocked);
+        //with vmId of required virtual machine in order to control returned values of its methods
+        when(vboxMocked.findMachine(vmId)).thenReturn(machineMocked);
         //mock object of type IGuestOSType is returned when the method IVirtualBox::getGuestOSType() is called
-        //with OS type id of required virtual machine in order to control returned values of its methods
+        //with OS type vmId of required virtual machine in order to control returned values of its methods
         when(vboxMocked.getGuestOSType(machineMocked.getOSTypeId())).thenReturn(guestOSTypeMocked);
         //string with value = "Linux" should be returned when the method IGuestOSType::getFamilyId() is called
         when(guestOSTypeMocked.getFamilyId()).thenReturn("Linux");
@@ -210,7 +210,7 @@ public class NativeVBoxAPIManagerTest {
         //string with value = "VirtualMachine_01" should be returned when the method IMachine::getName() is called
         when(machineMocked.getName()).thenReturn(expectedVM.getName());
         //string with value = "793d084a-0189-4a55-a9b7-531c455570a1" should be returned when the methodIMachine::getId() is called
-        when(machineMocked.getId()).thenReturn(uuid.toString());
+        when(machineMocked.getId()).thenReturn(vmId);
         //there should be returned Long value = 1 when the method IMachine::getCPUCount() is called
         when(machineMocked.getCPUCount()).thenReturn(expectedVM.getCountOfCPU());
         //there should be returned Long value = 1 when the method IMachine::getMonitorCount() is called
@@ -227,7 +227,7 @@ public class NativeVBoxAPIManagerTest {
         when(mediumMocked.getSize()).thenReturn(expectedVM.getHardDiskTotalSize()-expectedVM.getHardDiskFreeSpaceSize());
         
         //there should not be invoked any exception nor any error should not appear
-        VirtualMachine actualVM = sut.getVirtualMachineById(pm, uuid);
+        VirtualMachine actualVM = sut.getVirtualMachine(pm, vmId);
         
         //all attributes of VirtualMachine objects will be compared and should be same
         assertDeepVMsEquals(expectedVM, actualVM);
@@ -237,25 +237,25 @@ public class NativeVBoxAPIManagerTest {
      * This test tests that there should be invoked UnknownVirtualMachineException
      * exception when there is not any registered virtual machine with the used uuid.
      */
-    /*@Test
+    @Test
     public void getVirtualMachineByIdWithNoMatch(){
         //represents host machine from which is virtual machine required
         PhysicalMachine pm = new PMBuilder().build();
         //represents ID of required virtual machine
-        UUID uuid = UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1");
+        String vmId = "793d084a-0189-4a55-a9b7-531c455570a1";
                 
         //mock object of type IVirtualBox is returned when the method VirtualBoxManager::getVBox()
         //is called in order to control returned values of its methods
         when(vbmMocked.getVBox()).thenReturn(vboxMocked);
         //there should be thrown VBoxException exception when the method IVirtualBox::findMachine()
         //is called with uuid of required virtual machine which means there is not any
-        //registered virtual machine with id equal to used uuid
-        doThrow(VBoxException.class).when(vboxMocked).findMachine(uuid.toString());
+        //registered virtual machine with vmId equal to used uuid
+        doThrow(VBoxException.class).when(vboxMocked).findMachine(vmId);
         
         //there is expected to be thrown UnknownVirtualMachineException exception as a result
         //of unsuccessful virtual machine getting
         exception.expect(UnknownVirtualMachineException.class);
-        sut.getVirtualMachineById(pm, uuid);
+        sut.getVirtualMachine(pm, vmId);
     }
     
     /**
@@ -264,12 +264,12 @@ public class NativeVBoxAPIManagerTest {
      * NativeVBoxAPIManager::getVirtualMachineById() is processed (particularly
      * when the method VirtualBoxManager::connect() is called).
      */
-    /*@Test
+    @Test
     public void getVirtualMachineByIdWithSuddenNetworkConnectionLoss(){
        //represents host machine from which is virtual machine required
        PhysicalMachine pm = new PMBuilder().build();
        //represents ID of required virtual machine
-       UUID uuid = UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1");
+       String vmId = "793d084a-0189-4a55-a9b7-531c455570a1";
        //represents a url used for connecting physical machine pm
        String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();
        
@@ -278,16 +278,16 @@ public class NativeVBoxAPIManagerTest {
        doThrow(VBoxException.class).when(vbmMocked).connect(url, pm.getUsername(), pm.getUserPassword());
               
        exception.expect(ConnectionFailureException.class);
-       sut.getVirtualMachineById(pm, uuid);
+       sut.getVirtualMachine(pm, vmId);
     }
     
     /**
      * This test tests that there is returned the required virtual machine without
-     * any exception and error occurance when the method NativeVBoxAPIManager::getVirtualMachineByName()
-     * is called with name which actually identify some virtual machine from the
-     * list of registered virtual machines.
+ any exception and error occurance when the method NativeVBoxAPIManager::getVirtualMachine()
+ is called with name which actually identify some virtual machine from the
+ list of registered virtual machines.
      */
-    /*@Test
+    @Test
     public void getVirtualMachineByNameWithSomeMatch(){
        //represents host machine from which is virtual machine required
         PhysicalMachine pm = new PMBuilder().build();
@@ -309,7 +309,7 @@ public class NativeVBoxAPIManagerTest {
         //with name of required virtual machine in order to control returned values of its methods
         when(vboxMocked.findMachine(vmName)).thenReturn(machineMocked);
         //mock object of type IGuestOSType is returned when the method IVirtualBox::getGuestOSType()
-        //is called with OS type id of required virtual machine in order to control returned values of its methods
+        //is called with OS type vmId of required virtual machine in order to control returned values of its methods
         when(vboxMocked.getGuestOSType(machineMocked.getOSTypeId())).thenReturn(guestOSTypeMocked);
         //string with value = "Linux" should be returned when the method IGuestOSType::getFamilyId() is called
         when(guestOSTypeMocked.getFamilyId()).thenReturn("Linux");
@@ -338,7 +338,7 @@ public class NativeVBoxAPIManagerTest {
         when(mediumMocked.getSize()).thenReturn(expectedVM.getHardDiskTotalSize()-expectedVM.getHardDiskFreeSpaceSize());
         
         //there should not be invoked any exception nor any error should not appear
-        VirtualMachine actualVM = sut.getVirtualMachineByName(pm, vmName);
+        VirtualMachine actualVM = sut.getVirtualMachine(pm, vmName);
         
         //all attributes of VirtualMachine objects will be compared and should be same
         assertDeepVMsEquals(expectedVM, actualVM); 
@@ -348,7 +348,7 @@ public class NativeVBoxAPIManagerTest {
      * This test tests that there should be invoked UnknownVirtualMachineException
      * exception when there is not any registered virtual machine with the used name.
      */
-    /*@Test
+    @Test
     public void getVirtualMachineByNameWithNoMatch(){
         //represents host machine from which is virtual machine required
         PhysicalMachine pm = new PMBuilder().build();
@@ -360,22 +360,22 @@ public class NativeVBoxAPIManagerTest {
         when(vbmMocked.getVBox()).thenReturn(vboxMocked);
         //there should be thrown VBoxException exception when the method IVirtualBox::findMachine() is called
         //with uuid of required virtual machine which means there is not any registered virtual machine
-        //with id equal to used uuid
+        //with vmId equal to used uuid
         doThrow(VBoxException.class).when(vboxMocked).findMachine(vmName);
         
         //there is expected to be thrown UnknownVirtualMachineException exception as a result
         //of unsuccessful virtual machine getting
         exception.expect(UnknownVirtualMachineException.class);
-        sut.getVirtualMachineByName(pm, vmName);
+        sut.getVirtualMachine(pm, vmName);
     }
     
     /**
      * This test tests that there is invoked ConnectionFailureException exception
      * if there uccurs any network connection problem while the method
-     * NativeVBoxAPIManager::getVirtualMachineByName() is processed (particularly
+     * NativeVBoxAPIManager::getVirtualMachine() is processed (particularly
      * when the method VirtualBoxManager::connect() is called).
      */
-    /*@Test
+    @Test
     public void getVirtualMachineByNameWithSuddenNetworkConnectionLoss(){
        //represents host machine from which is virtual machine required
        PhysicalMachine pm = new PMBuilder().build();
@@ -389,7 +389,7 @@ public class NativeVBoxAPIManagerTest {
        doThrow(VBoxException.class).when(vbmMocked).connect(url, pm.getUsername(), pm.getUserPassword());
               
        exception.expect(ConnectionFailureException.class);
-       sut.getVirtualMachineByName(pm, vmName);
+       sut.getVirtualMachine(pm, vmName);
     }
     
     /**
@@ -398,7 +398,7 @@ public class NativeVBoxAPIManagerTest {
      * a result when the method is called with physical machine where this non=empty
      * list of virtual machines is located and no exceptions nor errors should appear.
      */
-    /*@Test
+    @Test
     public void getVirtualMachinesWithReturnedNonemptyVMsList(){
         //represents host machine from which are virtual machines required
         PhysicalMachine pm = new PMBuilder().build();
@@ -409,7 +409,7 @@ public class NativeVBoxAPIManagerTest {
                                             .name("VirtualMachine_02").hardDiskFreeSpaceSize(10021544L)
                                             .hardDiskTotalSize(180001544L).sizeOfRAM(2048L)
                                             .typeOfOS("MS-Windows").identifierOfOS("Win10_64").build();
-        //represents list of virtual machines which is expected as a result of NativeVBoxAPIManager::getVirtualMachines() method call
+        //represents list of virtual machines which is expected as a result of NativeVBoxAPIManager::getAllVirtualMachines() method call
         List<VirtualMachine> expList = Arrays.asList(vm1,vm2);        
         //represents mock object of type IMachine for better test control
         IMachine machineMocked1 = mock(IMachine.class);
@@ -429,10 +429,10 @@ public class NativeVBoxAPIManagerTest {
         //control returned values of their methods
         when(vboxMocked.getMachines()).thenReturn(vboxMachines);
         //mock object of type IGuestOSType is returned when the method IVirtualBox::getGuestOSType() is called
-        //with OS type id of required virtual machine in order to control returned values of its methods
+        //with OS type vmId of required virtual machine in order to control returned values of its methods
         when(vboxMocked.getGuestOSType(machineMocked1.getOSTypeId())).thenReturn(guestOSTypeMocked);
         //mock object of type IGuestOSType is returned when the method IVirtualBox::getGuestOSType() is called
-        //with OS type id of required virtual machine in order to control returned values of its methods
+        //with OS type vmId of required virtual machine in order to control returned values of its methods
         when(vboxMocked.getGuestOSType(machineMocked2.getOSTypeId())).thenReturn(guestOSTypeMocked);
         //for first virtual machine there should be returned string with value = "Linux" and for the second
         //one string with value = "MS-Windows" when the method IGuestOSType::getFamily() is called
@@ -469,9 +469,9 @@ public class NativeVBoxAPIManagerTest {
         when(mediumMocked.getSize()).thenReturn(vm1.getHardDiskTotalSize()-vm1.getHardDiskFreeSpaceSize())
                                     .thenReturn(vm2.getHardDiskTotalSize()-vm2.getHardDiskFreeSpaceSize());
         
-        //when the method NativeVBoxAPIManager::getVirtualMachines() is called then there should
+        //when the method NativeVBoxAPIManager::getAllVirtualMachines() is called then there should
         //be returned a list with 2 virtual machines
-        List<VirtualMachine> actList = sut.getVirtualMachines(pm);
+        List<VirtualMachine> actList = sut.getAllVirtualMachines(pm);
         
         //both lists are sorted in order to establish the same conditions for comparation
         Collections.sort(expList, vmComparator);
@@ -487,7 +487,7 @@ public class NativeVBoxAPIManagerTest {
      * on a particular physical machine then there should be returned an empty
      * list of virtual machines without any exception or error occurance.
      */
-    /*@Test
+    @Test
     public void getVirtualMachinesWithReturnedEmptyVMsList(){
        //represents host machine from which are virtual machines required
        PhysicalMachine pm = new PMBuilder().build();
@@ -500,7 +500,7 @@ public class NativeVBoxAPIManagerTest {
        when(vboxMocked.getMachines()).thenReturn(new ArrayList<>());
        
        //there should be returned an empty list of object of type VirtualMachine
-       List<VirtualMachine> vmsList = sut.getVirtualMachines(pm);
+       List<VirtualMachine> vmsList = sut.getAllVirtualMachines(pm);
        
        assertTrue("List of virtual machines should be empty",vmsList.isEmpty());
     }    
@@ -508,10 +508,10 @@ public class NativeVBoxAPIManagerTest {
     /**
      * This test tests that there is invoked ConnectionFailureException exception
      * if there uccurs any network connection problem while the method
-     * NativeVBoxAPIManager::getVirtualMachines() is processed (particularly
+     * NativeVBoxAPIManager::getAllVirtualMachines() is processed (particularly
      * when the method VirtualBoxManager::connect() is called).
      */
-    /*@Test
+    @Test
     public void getVirtualMachinesWithSuddenNetworkConnectionLoss(){
        //represents host machine from which are virtual machines required
        PhysicalMachine pm = new PMBuilder().build();
@@ -523,7 +523,7 @@ public class NativeVBoxAPIManagerTest {
        doThrow(VBoxException.class).when(vbmMocked).connect(url, pm.getUsername(), pm.getUserPassword());
               
        exception.expect(ConnectionFailureException.class);
-       sut.getVirtualMachines(pm);
+       sut.getAllVirtualMachines(pm);
     }
     
     /**
@@ -1042,6 +1042,11 @@ public class NativeVBoxAPIManagerTest {
         }
     }
     
+    
+    /**
+     * Class Builder for easier and faster creating and setting up new object
+     * of type VirtualMachine.
+     */
     class VMBuilder{
         private UUID id = UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1");
         private String name = "VirtualMachine_01";
@@ -1170,408 +1175,4 @@ public class NativeVBoxAPIManagerTest {
         return res;
         }
     };
-    
-    
-    /*
-    @Test
-    public void getVMByIdWithValidIdAndSomeMatch() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doReturn("793d084a-0189-4a55-a9b7-531c455570a1").when(machMocked).getId();
-        doReturn("Fedora-21-WS").when(machMocked).getName();
-        doReturn(1L).when(machMocked).getCPUCount();
-        doReturn(1L).when(machMocked).getMonitorCount();
-        doReturn(100L).when(machMocked).getCPUExecutionCap();
-        doReturn(7187988480L).when(medMocked).getSize();
-        doReturn(21474836480L).when(medMocked).getLogicalSize();
-        doReturn(4096L).when(machMocked).getMemorySize();
-        doReturn(12L).when(machMocked).getVRAMSize();
-        doReturn("Fedora_64").when(machMocked).getOSTypeId();
-        
-        VirtualMachine expVM = new VirtualMachine.Builder(UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1"), "Fedora-21-WS", pm)
-                                                 .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                 .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                 .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").identifierOfOS("Fedora_64").build();
-        VirtualMachine actVM = sut.getVirtualMachineById(pm, UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1"));
-        
-        assertNotNull("Returned virtual machine should not be null",actVM);
-        assertDeepVMsEquals(expVM,actVM);
-    }
-    
-    @Test
-    public void getVMByIdWithValidIdAndNoMatch() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vboxMocked).findMachine("793d084a-0189-4a55-a9b7-531c455570a1");
-        
-        exception.expect(UnknownVirtualMachineException.class);
-        VirtualMachine actVM = sut.getVirtualMachineById(pm, UUID.fromString("793d010c-0189-4a55-a9b7-531c455570a1"));
-    }
-    
-    @Test
-    public void getVMByIdWithNullId() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        
-        exception.expect(IllegalArgumentException.class);
-        sut.getVirtualMachineById(pm, null);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, never()).connect(anyString(), anyString(), anyString());
-    }
-    
-    @Test
-    public void getVMByIdInvalidConnection() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vbmMocked).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        
-        exception.expect(ConnectionFailureException.class);
-        sut.getVirtualMachineById(pm, UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1"));
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, times(3)).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        verify(vbmMocked, never()).getVBox();
-    }
-    
-    @Test
-    public void getVMByNameWithValidNameAndSomeMatch() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doReturn("793d084a-0189-4a55-a9b7-531c455570a1").when(machMocked).getId();
-        doReturn("Fedora-21-WS").when(machMocked).getName();
-        doReturn(1L).when(machMocked).getCPUCount();
-        doReturn(1L).when(machMocked).getMonitorCount();
-        doReturn(100L).when(machMocked).getCPUExecutionCap();
-        doReturn(7187988480L).when(medMocked).getSize();
-        doReturn(21474836480L).when(medMocked).getLogicalSize();
-        doReturn(4096L).when(machMocked).getMemorySize();
-        doReturn(12L).when(machMocked).getVRAMSize();
-        doReturn("Fedora_64").when(machMocked).getOSTypeId();
-        
-        VirtualMachine expVM = new VirtualMachine.Builder(UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1"), "Fedora-21-WS", pm)
-                                                 .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                 .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                 .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").identifierOfOS("Fedora_64").build();
-        VirtualMachine actVM = sut.getVirtualMachineByName(pm, "Fedora-21-WS");
-        
-        assertNotNull("Returned virtual machine should not be null",actVM);
-        assertDeepVMsEquals(expVM,actVM);
-    }
-    
-    @Test
-    public void getVMByNameWithValidNameAndNoMatch() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vboxMocked).findMachine("Fedora-21-WS");
-        
-        exception.expect(UnknownVirtualMachineException.class);
-        VirtualMachine actVM = sut.getVirtualMachineByName(pm, "Fedora-21-WS");
-    }
-    
-    @Test
-    public void getVMByNameWithEmptyNameString() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        
-        exception.expect(IllegalArgumentException.class);
-        sut.getVirtualMachineByName(pm, "");
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, never()).connect(anyString(), anyString(), anyString());
-    }
-    
-    @Test
-    public void getVMByNameWithNullName() throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        
-        exception.expect(IllegalArgumentException.class);
-        sut.getVirtualMachineByName(pm, null);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, never()).connect(anyString(), anyString(), anyString());
-    }
-    
-    @Test
-    public void getVMByNameWithInvalidConnection(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vbmMocked).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        
-        exception.expect(ConnectionFailureException.class);
-        sut.getVirtualMachineByName(pm, "Fedora-21-WS");
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, times(3)).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        verify(vbmMocked, never()).getVBox();
-    }
-    
-    @Test
-    public void getVMsWithValidConnectionAndSomeReturnedMachines(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doReturn("793d084a-0189-4a55-a9b7-531c455570a1")
-                .doReturn("793d047c-1148-4a55-a9b7-00aa455570a1").when(machMocked).getId();
-        doReturn("Fedora-21-WS")
-                .doReturn("Ubuntu 14.04 LTS").when(machMocked).getName();
-        doReturn(1L).when(machMocked).getCPUCount();//same for both
-        doReturn(1L).when(machMocked).getMonitorCount();//same for both
-        doReturn(100L).when(machMocked).getCPUExecutionCap();//same for both
-        doReturn(7187988480L)
-                .doReturn(3548741580L).when(medMocked).getSize();
-        doReturn(21474836480L)
-                .doReturn(15478784512L).when(medMocked).getLogicalSize();
-        doReturn(4096L)
-                .doReturn(1024L).when(machMocked).getMemorySize();
-        doReturn(12L).when(machMocked).getVRAMSize();//same for both
-        doReturn("Fedora_64")
-                .doReturn("Ubuntu_64").when(machMocked).getOSTypeId();
-        
-        VirtualMachine expVM1 = new VirtualMachine.Builder(UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1"), "Fedora-21-WS", pm)
-                                                  .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                  .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                  .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        VirtualMachine expVM2 = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Ubuntu 14.04 LTS", pm)
-                                                  .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                  .hardDiskFreeSpaceSize(11930042932L).hardDiskTotalSize(15478784512L)
-                                                  .sizeOfRAM(1024L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Ubuntu_64").build();
-        
-        List<VirtualMachine> expVMs = Arrays.asList(expVM1,expVM2);
-        List<VirtualMachine> actVMs = sut.getVirtualMachines(pm);
-        
-        Collections.sort(expVMs, vmComparator);
-        Collections.sort(actVMs, vmComparator);
-        
-        assertEquals("There should be two virtual machines in list",2,actVMs.size());
-        assertNotNull("Returned virtual machine should not be null",actVMs.get(0));
-        assertNotNull("Returned virtual machine should not be null",actVMs.get(1));
-        assertDeepVMsEquals(expVMs,actVMs);
-    }
-    
-    @Test
-    public void getVMsWithValidConnectionAndNoReturnedMachines(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        List<IMachine> list = new ArrayList<>();
-        doReturn(list).when(vboxMocked).getMachines();
-        
-        List<VirtualMachine> actVMs = sut.getVirtualMachines(pm);
-        assertTrue("List should be empty",actVMs.isEmpty());
-    }
-    
-    @Test
-    public void getVMsWithInvalidConnection(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vbmMocked).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        
-        exception.expect(ConnectionFailureException.class);
-        sut.getVirtualMachines(pm);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, times(3)).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        verify(vbmMocked, never()).getVBox();
-    }
-    
-    @Test
-    public void removeVMWithValidExistingVM(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");        
-        VirtualMachine vmToRem = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").identifierOfOS("Fedora_64").build();
-        
-        sut.removeVM(vmToRem);
-        
-        verify(vbmMocked).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        verify(machMocked).unregister(CleanupMode.DetachAllReturnHardDisksOnly);
-        verify(machMocked).deleteConfig(any(List.class));
-    }
-    
-    @Test
-    public void removeVMWithValidNotExistingVM(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vboxMocked).findMachine("Fedora-21-WS");
-        
-        VirtualMachine vmToRem = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        
-        exception.expect(UnknownVirtualMachineException.class);
-        sut.removeVM(vmToRem);
-        
-        exception = ExpectedException.none();
-        verify(machMocked, never()).unregister(any(CleanupMode.class));
-        verify(machMocked, never()).deleteConfig(any(List.class));
-    }
-    
-    @Test
-    public void removeVMWithNullVM(){        
-        exception.expect(IllegalArgumentException.class);
-        sut.removeVM(null);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, never()).connect(anyString(), anyString(), anyString());
-    }
-    
-    @Test
-    public void removeVMWithInvalidConnection(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vbmMocked).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        
-        VirtualMachine vmToRem = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        
-        exception.expect(ConnectionFailureException.class);
-        sut.removeVM(vmToRem);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, times(3)).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        verify(vbmMocked, never()).getVBox();
-    }
-    
-    @Test
-    public void createFullCloneWithValidConnectionAndExistingVM(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doReturn("793d084a-0189-4a55-a9b7-531c455570a1").when(machMocked).getId();
-        doReturn("Fedora-21-WS_FCopy1").when(machMocked).getName();
-        doReturn(1L).when(machMocked).getCPUCount();
-        doReturn(1L).when(machMocked).getMonitorCount();
-        doReturn(100L).when(machMocked).getCPUExecutionCap();
-        doReturn(7187988480L).when(medMocked).getSize();
-        doReturn(21474836480L).when(medMocked).getLogicalSize();
-        doReturn(4096L).when(machMocked).getMemorySize();
-        doReturn(12L).when(machMocked).getVRAMSize();
-        doReturn("Fedora_64").when(machMocked).getOSTypeId();
-        
-        VirtualMachine vmToClone = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        VirtualMachine expVM = new VirtualMachine.Builder(UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1"), "Fedora-21-WS_FCopy1", pm)
-                                                 .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                 .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                 .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        VirtualMachine actVM = sut.createFullClone(vmToClone);
-        
-        assertNotNull("Returned virtual machine should not be null",actVM);
-        assertDeepVMsEquals(expVM,actVM);
-    }
-    
-    @Test
-    public void createFullCloneWithValidConnectionAndNotExistingVM(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vboxMocked).findMachine("Fedora-21-WS");
-        
-        VirtualMachine vmToClone = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        
-        exception.expect(UnknownVirtualMachineException.class);
-        VirtualMachine actVM = sut.createFullClone(vmToClone);
-        
-        exception = ExpectedException.none();
-        verify(machMocked, never()).cloneTo(any(IMachine.class), any(CloneMode.class), any(List.class));
-        verify(machMocked, never()).saveSettings();
-        verify(vboxMocked, never()).registerMachine(any(IMachine.class));
-    }
-    
-    @Test
-    public void createFullCloneWithValidConnectionAndNullVM(){
-        exception.expect(IllegalArgumentException.class);
-        VirtualMachine actVM = sut.createFullClone(null);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, never()).connect(anyString(), anyString(), anyString());
-    }
-    
-    @Test
-    public void createFullCloneWithInvalidConnection(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vbmMocked).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        
-        VirtualMachine vmToClone = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        
-        exception.expect(ConnectionFailureException.class);
-        VirtualMachine actVM = sut.createFullClone(vmToClone);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, times(3)).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        verify(vbmMocked, never()).getVBox();
-    }
-    
-    @Test
-    public void createLinkedCloneWithValidConnectionAndExistingVM(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doReturn("793d084a-0189-4a55-a9b7-531c455570a1").when(machMocked).getId();
-        doReturn("Fedora-21-WS_LCopy1").when(machMocked).getName();
-        doReturn(1L).when(machMocked).getCPUCount();
-        doReturn(1L).when(machMocked).getMonitorCount();
-        doReturn(100L).when(machMocked).getCPUExecutionCap();
-        doReturn(7187988480L).when(medMocked).getSize();
-        doReturn(21474836480L).when(medMocked).getLogicalSize();
-        doReturn(4096L).when(machMocked).getMemorySize();
-        doReturn(12L).when(machMocked).getVRAMSize();
-        doReturn("Fedora_64").when(machMocked).getOSTypeId();
-        
-        VirtualMachine vmToClone = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        VirtualMachine expVM = new VirtualMachine.Builder(UUID.fromString("793d084a-0189-4a55-a9b7-531c455570a1"), "Fedora-21-WS_LCopy1", pm)
-                                                 .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                 .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                 .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        VirtualMachine actVM = sut.createLinkedClone(vmToClone);
-        
-        assertNotNull("Returned virtual machine should not be null",actVM);
-        assertDeepVMsEquals(expVM,actVM);
-    }
-    
-    @Test
-    public void createLinkedCloneWithValidConnectionAndNotExistingVM(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vboxMocked).findMachine("Fedora-21-WS");
-        
-        VirtualMachine vmToClone = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        
-        exception.expect(UnknownVirtualMachineException.class);
-        VirtualMachine actVM = sut.createFullClone(vmToClone);
-        
-        exception = ExpectedException.none();
-        verify(machMocked, never()).cloneTo(any(IMachine.class), any(CloneMode.class), any(List.class));
-        verify(machMocked, never()).saveSettings();
-        verify(vboxMocked, never()).registerMachine(any(IMachine.class));
-    }
-    
-    @Test
-    public void createLinkedCloneWithValidConnectionAndNullVM(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");        
-        
-        exception.expect(IllegalArgumentException.class);
-        VirtualMachine actVM = sut.createFullClone(null);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, never()).connect(anyString(), anyString(), anyString());
-    }
-    
-    @Test
-    public void createLinkedCloneWithInvalidConnection(){
-        PhysicalMachine pm = new PhysicalMachine("150.150.14.87","18083","John","trio158hy7");
-        doThrow(VBoxException.class).when(vbmMocked).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        
-        VirtualMachine vmToClone = new VirtualMachine.Builder(UUID.fromString("793d047c-1148-4a55-a9b7-00aa455570a1"), "Fedora-21-WS", pm)
-                                                     .countOfCPU(1L).countOfMonitors(1L).cpuExecutionCap(100L)
-                                                     .hardDiskFreeSpaceSize(14286848000L).hardDiskTotalSize(21474836480L)
-                                                     .sizeOfRAM(4096L).sizeOfVRAM(12L).typeOfOS("Linux").versionOfOS("Fedora_64").build();
-        
-        exception.expect(ConnectionFailureException.class);
-        VirtualMachine actVM = sut.createFullClone(vmToClone);
-        
-        exception = ExpectedException.none();
-        verify(vbmMocked, times(3)).connect("http://150.150.14.87:18083", "John", "trio158hy7");
-        verify(vbmMocked, never()).getVBox();
-    }
-
-    ;*/
-    
 }

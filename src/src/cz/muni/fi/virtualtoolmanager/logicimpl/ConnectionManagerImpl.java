@@ -29,19 +29,19 @@ public class ConnectionManagerImpl implements ConnectionManager{
 
     private final ConnectedPhysicalMachines connectedPhysicalMachines;
     private final NativeVBoxAPIConnection nativeVBoxAPIConnection;
-    private final VirtualizationToolManager virtualizationToolManager;
+    private final NativeVBoxAPIManager nativeVBoxAPIManager;
             
     public ConnectionManagerImpl(){
         this(ConnectedPhysicalMachines.getInstance(), new NativeVBoxAPIConnection(),
-             new VirtualizationToolManagerImpl());
+             new NativeVBoxAPIManager());
     }
     
     ConnectionManagerImpl(ConnectedPhysicalMachines cpm, NativeVBoxAPIConnection natapiCon,
-                          VirtualizationToolManager vtm){
+                          NativeVBoxAPIManager natapiMan){
         
         this.connectedPhysicalMachines = cpm;
         this.nativeVBoxAPIConnection = natapiCon;
-        this.virtualizationToolManager = vtm;
+        this.nativeVBoxAPIManager = natapiMan;
         
     }
     

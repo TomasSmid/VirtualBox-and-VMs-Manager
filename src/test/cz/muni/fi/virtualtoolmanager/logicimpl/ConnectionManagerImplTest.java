@@ -17,7 +17,6 @@ package cz.muni.fi.virtualtoolmanager.logicimpl;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;
-import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -28,7 +27,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.junit.Rule;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
@@ -49,7 +47,7 @@ public class ConnectionManagerImplTest {
     
     private ConnectionManagerImpl sut;
     private NativeVBoxAPIConnection conMocked;
-    private VirtualizationToolManagerImpl vtmMocked;
+    private NativeVBoxAPIManager natapiManMocked;
     private ConnectedPhysicalMachines cpmMocked;
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -58,8 +56,8 @@ public class ConnectionManagerImplTest {
     public void setUp() {        
         cpmMocked = mock(ConnectedPhysicalMachines.class);
         conMocked = mock(NativeVBoxAPIConnection.class);
-        vtmMocked = mock(VirtualizationToolManagerImpl.class);        
-        sut = new ConnectionManagerImpl(cpmMocked,conMocked, vtmMocked);
+        natapiManMocked = mock(NativeVBoxAPIManager.class);        
+        sut = new ConnectionManagerImpl(cpmMocked,conMocked, natapiManMocked);
         System.setOut(new PrintStream(outContent));
         System.setErr(new PrintStream(errContent));
     }
@@ -278,7 +276,7 @@ public class ConnectionManagerImplTest {
         assertTrue("There should not be written any text on standard output", outContent.toString().isEmpty());
         
         //checks this step (and also following steps after this one) has not been done as expected
-        verify(vtmMocked,never()).getVirtualMachines();
+        verify(natapiManMocked,never()).getAllVirtualMachines(pm);
     }
     
     /**

@@ -19,7 +19,6 @@ import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.CloneType;
 import java.util.List;
-import java.util.UUID;
 import org.virtualbox_4_3.VirtualBoxManager;
 
 
@@ -45,15 +44,11 @@ final class NativeVBoxAPIManager {
         throw new UnsupportedOperationException("Unsupported operation");
     }
     
-    public VirtualMachine getVirtualMachineById(PhysicalMachine physicalMachine, UUID id) {
+    public VirtualMachine getVirtualMachine(PhysicalMachine physicalMachine, String nameOrId) {
         throw new UnsupportedOperationException("Unsupported operation");
     }
     
-    public VirtualMachine getVirtualMachineByName(PhysicalMachine physicalMachine, String name) {
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    public List<VirtualMachine> getVirtualMachines(PhysicalMachine physicalMachine) {
+    public List<VirtualMachine> getAllVirtualMachines(PhysicalMachine physicalMachine) {
         throw new UnsupportedOperationException("Unsupported operation");
     }
     
