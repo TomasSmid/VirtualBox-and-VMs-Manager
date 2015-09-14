@@ -18,6 +18,7 @@ package cz.muni.fi.virtualtoolmanager.logicimpl;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PortRule;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
 import java.util.List;
+import org.virtualbox_4_3.VirtualBoxManager;
 
 
 
@@ -27,14 +28,14 @@ import java.util.List;
  */
 class NativeVBoxAPIMachine {
     
-    private static final NativeVBoxAPIMachine INSTANCE = new NativeVBoxAPIMachine();
+    private final VirtualBoxManager virtualBoxManager;
     
-    public static NativeVBoxAPIMachine getInstance(){
-        return INSTANCE;
+    public NativeVBoxAPIMachine(){
+        this(VirtualBoxManager.createInstance(null));
     }
     
-    private NativeVBoxAPIMachine(){
-        
+    NativeVBoxAPIMachine(VirtualBoxManager virtualBoxManager){
+        this.virtualBoxManager = virtualBoxManager;
     }
     
     public void startVM(VirtualMachine virtualMachine) {
@@ -53,13 +54,13 @@ class NativeVBoxAPIMachine {
         throw new UnsupportedOperationException("Unsupported operation");
     }
     
-    public List<PortRule> getPortRules(VirtualMachine virtualMachine) {
+    public List<String> getPortRules(VirtualMachine virtualMachine) {
         throw new UnsupportedOperationException("Unsupported operation");
     }
     
-    public String getVMState(VirtualMachine virtualMachine) {
+    /*public String getVMState(VirtualMachine virtualMachine) {
         throw new UnsupportedOperationException("Unsupported operation");
-    }
+    }*/
     
     /*private void checkVMIsNotNull(VirtualMachine vm, String errMsg){
         if(vm == null){
