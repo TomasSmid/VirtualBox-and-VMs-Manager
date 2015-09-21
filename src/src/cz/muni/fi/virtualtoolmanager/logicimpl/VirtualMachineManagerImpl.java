@@ -17,6 +17,7 @@ package cz.muni.fi.virtualtoolmanager.logicimpl;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PortRule;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
+import cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager;
 import java.util.List;
 
@@ -26,6 +27,18 @@ import java.util.List;
  */
 public class VirtualMachineManagerImpl implements VirtualMachineManager{
 
+    private NativeVBoxAPIMachine nativeVBoxAPIMachine;
+    private ConnectionManager connectionManager;
+    
+    public VirtualMachineManagerImpl(){
+        this(new NativeVBoxAPIMachine(), new ConnectionManagerImpl());
+    }
+    
+    VirtualMachineManagerImpl(NativeVBoxAPIMachine natAPIMachine, ConnectionManager conMan){
+        this.nativeVBoxAPIMachine = natAPIMachine;
+        this.connectionManager = conMan;
+    }
+    
     @Override
     public void startVM(VirtualMachine virtualMachine) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.

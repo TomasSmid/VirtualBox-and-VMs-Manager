@@ -48,8 +48,8 @@ import org.virtualbox_4_3.VBoxException;
 import org.virtualbox_4_3.VirtualBoxManager;
 
 /**
- * This test class ensures unit testing of class NativeVBoxAPIConnection and
- * is intended to be a pointer that class NativeVBoxAPIConnection works as expected.
+ * This test class ensures unit testing of class NativeVBoxAPIMachine and
+ * is intended to be a pointer that class NativeVBoxAPIMachine works as expected.
  * 
  * @author Tomáš Šmíd
  */

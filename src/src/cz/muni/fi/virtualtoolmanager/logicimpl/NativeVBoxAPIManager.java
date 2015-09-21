@@ -27,7 +27,7 @@ import org.virtualbox_4_3.VirtualBoxManager;
  *
  * @author Tomáš Šmíd
  */
-final class NativeVBoxAPIManager {
+class NativeVBoxAPIManager {
     
     private VirtualBoxManager virtualBoxManager;
     
