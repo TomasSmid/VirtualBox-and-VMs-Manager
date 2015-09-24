@@ -17,6 +17,7 @@ package cz.muni.fi.virtualtoolmanager.logicimpl;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -138,9 +139,15 @@ public class ConnectionManagerImplTest {
      * This test tests that a nonexistent or existent physical machine which is being connected
      * in a moment when the network connection is not available cannot be and is not successfully
      * connected.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToNotExistingPhysicalMachineOrInavailableNetworkConnection(){
+    public void connectToNotExistingPhysicalMachineOrInavailableNetworkConnection() throws ConnectionFailureException,
+                                                                                           InterruptedException,
+                                                                                           IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that neccessary steps for physical machine connection are to be done
@@ -162,9 +169,15 @@ public class ConnectionManagerImplTest {
     /**
      * This test tests that a physical machine with an incorrect web server port
      * of virtualization tool cannot be and is not successfully connected.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToPhysicalMachineWithIncorrectWebServerPort(){
+    public void connectToPhysicalMachineWithIncorrectWebServerPort() throws ConnectionFailureException,
+                                                                            InterruptedException,
+                                                                            IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that neccessary steps for physical machine connection are to be done
@@ -185,9 +198,15 @@ public class ConnectionManagerImplTest {
     /**
      * This test tests that a physical machine with an incorrect username
      * cannot be and is not successfully connected.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToPhysicalMachineWithIncorrectUsername(){
+    public void connectToPhysicalMachineWithIncorrectUsername() throws ConnectionFailureException,
+                                                                       InterruptedException, 
+                                                                       IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that neccessary steps for physical machine connection are to be done
@@ -208,9 +227,15 @@ public class ConnectionManagerImplTest {
     /**
      * This test tests that a physical machine with an incorrect user password
      * cannot be and is not successfully connected.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToPhysicalMachineWithIncorrectUserPassword(){
+    public void connectToPhysicalMachineWithIncorrectUserPassword() throws ConnectionFailureException,
+                                                                           InterruptedException,
+                                                                           IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that neccessary steps for physical machine connection are to be done
@@ -255,9 +280,15 @@ public class ConnectionManagerImplTest {
      * This test tests that there should be written an error message on standard error output
      * when the method disconnectFrom() is called when the network connection is not available or
      * the virtualization tool web server is not running.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void disconnectFromConnectedPhysicalMachineWithInavailableConnection(){
+    public void disconnectFromConnectedPhysicalMachineWithInavailableConnection() throws ConnectionFailureException, 
+                                                                                         InterruptedException, 
+                                                                                         IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that there should follow all neccessary steps for correct end up of work
@@ -283,9 +314,15 @@ public class ConnectionManagerImplTest {
      * This test tests that there should be written an error message on standard error output
      * when the method disconnectFrom() is called with physical machine which is not connected
      * at the moment of method execution.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void disconnectFromNotConnectedPhysicalMachine(){
+    public void disconnectFromNotConnectedPhysicalMachine() throws ConnectionFailureException,
+                                                                   InterruptedException, 
+                                                                   IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that the method is ended without any further steps being done
@@ -309,9 +346,15 @@ public class ConnectionManagerImplTest {
      * virtualization tool web server port (against the original physical machine which is
      * recorded as connected physical machine) and that that physical machine cannot and is not
      * disconnected.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void disconnectFromPhysicalMachineWithIncorrectWebServerPort(){
+    public void disconnectFromPhysicalMachineWithIncorrectWebServerPort() throws ConnectionFailureException,
+                                                                                 InterruptedException, 
+                                                                                 IncompatibleVirtToolAPIVersionException{
         PhysicalMachine corPM = new PMBuilder().build();
         PhysicalMachine incorPM = new PMBuilder().webserverPort("1111").build();
         
@@ -339,9 +382,15 @@ public class ConnectionManagerImplTest {
      * when the method disconnectFrom() is called with physical machine which has incorrect
      * username (against the original physical machine which is recorded as connected physical machine)
      * and that that physical machine cannot and is not disconnected.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
+     * @throws java.lang.InterruptedException
      */
     @Test
-    public void disconnectFromPhysicalMachineWithIncorrectUsername(){
+    public void disconnectFromPhysicalMachineWithIncorrectUsername() throws ConnectionFailureException,
+                                                                            IncompatibleVirtToolAPIVersionException,
+                                                                            InterruptedException{
         PhysicalMachine corPM = new PMBuilder().build();
         PhysicalMachine incorPM = new PMBuilder().username("Henry").build();
         
@@ -368,9 +417,15 @@ public class ConnectionManagerImplTest {
      * when the method disconnectFrom() is called with physical machine which has incorrect
      * user password (against the original physical machine which is recorded as connected physical machine)
      * and that that physical machine cannot and is not disconnected.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void disconnectFromPhysicalMachineWithIncorrectUserPassword(){
+    public void disconnectFromPhysicalMachineWithIncorrectUserPassword() throws ConnectionFailureException,
+                                                                                InterruptedException, 
+                                                                                IncompatibleVirtToolAPIVersionException{
         PhysicalMachine corPM = new PMBuilder().build();
         PhysicalMachine incorPM = new PMBuilder().userPassword("14gg44").build();
         
@@ -432,9 +487,15 @@ public class ConnectionManagerImplTest {
      * This test tests that physical machine should not be connected in the future
      * when is recorded as connected, but there is a connection problem
      * during connection recognition.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void isConnectedWithConnectedPhysicalMachineAndInavailableConnection(){
+    public void isConnectedWithConnectedPhysicalMachineAndInavailableConnection() throws ConnectionFailureException, 
+                                                                                         InterruptedException, 
+                                                                                         IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that there will follow a physical test of connection
@@ -450,9 +511,15 @@ public class ConnectionManagerImplTest {
     /**
      * This test tests that there is returned a negative answer when a queried
      * physical machine is not recorded as a connected physical machine.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void isConnectedWithNotConnectedPhysicalMachine(){
+    public void isConnectedWithNotConnectedPhysicalMachine() throws ConnectionFailureException,
+                                                                    InterruptedException, 
+                                                                    IncompatibleVirtToolAPIVersionException{
         PhysicalMachine pm = new PMBuilder().build();
         
         //this step ensures that there will not follow a physical test of connection
@@ -468,9 +535,15 @@ public class ConnectionManagerImplTest {
      * This test tests that there is returned a negative answer when a queried
      * physical machine with incorrect web server port is not absolutely equal
      * to some physical machine from the list of connected physical machines.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void isConnectedWithIncorrectWebServerPort(){
+    public void isConnectedWithIncorrectWebServerPort() throws ConnectionFailureException,
+                                                               InterruptedException,
+                                                               IncompatibleVirtToolAPIVersionException{
         PhysicalMachine corPM = new PMBuilder().build();
         PhysicalMachine incorPM = new PMBuilder().webserverPort("18080").build();
         
@@ -492,9 +565,15 @@ public class ConnectionManagerImplTest {
      * This test tests that there is returned a negative answer when a queried
      * physical machine with incorrect username is not absolutely equal
      * to some physical machine from the list of connected physical machines.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void isConnectedWithIncorrectUsername(){
+    public void isConnectedWithIncorrectUsername() throws ConnectionFailureException,
+                                                          InterruptedException, 
+                                                          IncompatibleVirtToolAPIVersionException{
         PhysicalMachine corPM = new PMBuilder().build();
         PhysicalMachine incorPM = new PMBuilder().username("Jimbo").build();
         
@@ -516,9 +595,15 @@ public class ConnectionManagerImplTest {
      * This test tests that there is returned a negative answer when a queried
      * physical machine with incorrect user password is not absolutely equal
      * to some physical machine from the list of connected physical machines.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void isConnectedWithIncorrectUserPassword(){
+    public void isConnectedWithIncorrectUserPassword() throws ConnectionFailureException,
+                                                              InterruptedException,
+                                                              IncompatibleVirtToolAPIVersionException{
         PhysicalMachine corPM = new PMBuilder().build();
         PhysicalMachine incorPM = new PMBuilder().userPassword("55448sad8").build();
         

@@ -22,18 +22,32 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
-import static org.mockito.Mockito.*;
+import org.junit.runner.RunWith;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.virtualbox_4_3.IVirtualBox;
 import org.virtualbox_4_3.VBoxException;
 import org.virtualbox_4_3.VirtualBoxManager;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import org.powermock.api.mockito.PowerMockito;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * This test class ensure unit testing of class NativeVBoxAPIConnection and
- * is intended to be a pointer that class NativeVBoxAPIConnection works in
- * a required way.
+ * is intended to be a pointer that class NativeVBoxAPIConnection works as expected.
  * 
  * @author Tomáš Šmíd
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(VirtualBoxManager.class)
 public class NativeVBoxAPIConnectionTest {
     
     @Rule
@@ -44,44 +58,80 @@ public class NativeVBoxAPIConnectionTest {
                                       //which is needed to be mocked for isolated and correct testing
     
     @Before
-    public void setUp(){        
+    public void setUp(){
+        //to get a required instance of type VirtualBoxManager it is needed to mock static methods
+        //of class VirtualBoxManager because of the static build factory VirtualBoxManager::createInstance()
+        PowerMockito.mockStatic(VirtualBoxManager.class);
+        //mock object of type VirtualBoxManager for easier and faster testing (for the void methods there is
+        //the default setting equal to _doNothing()_)
         vbmMock = mock(VirtualBoxManager.class);
-        sut = new NativeVBoxAPIConnection(vbmMock);
+        //there is always returned a mock object of type VirtualBoxManager in order to have easier and faster
+        //testing when the static method VirtualBoxManager::createInstance() is called
+        when(VirtualBoxManager.createInstance(null)).thenReturn(vbmMock);
+        sut = new NativeVBoxAPIConnection();
     }
     
     /**
-     * Tests that there is not unexpectedly invoked any exception when the method connect() from class
-     * VirtualBoxManager is called with a valid and existing input parameter of type PhysicalMachine.
+     * This test tests that there is not unexpectedly invoked any exception when
+     * the method NativeVBoxAPIConnection::connect() is called with a valid and
+     * existing input parameter of type PhysicalMachine.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToValidExistingPhysicalMachine(){
+    public void connectToValidExistingPhysicalMachine() throws ConnectionFailureException,
+                                                               InterruptedException,
+                                                               IncompatibleVirtToolAPIVersionException{
+        //represents a physical machine to which should manage to connect to
         PhysicalMachine pm = new PMBuilder().build();
-        IVirtualBox vboxMock = mock(IVirtualBox.class);//fact that vboxMock is mocked object means the real
-                                                       //methods of class IVirtualBox are not called and in this
-                                                       //case nothing happens because no further setting is done
+        String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();         
+        //fact that vboxMock is mocked object means the real methods of class IVirtualBox are not 
+        //called and in this case nothing happens because no further setting is done
+        IVirtualBox vboxMock = mock(IVirtualBox.class);        
+                
+        //there should be returned a mock object of type IVirtualBox for easier and faster testing
+        //when the method VirtualBoxManager::getVBox() is called
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
+        //there should be returned a string with value "4_3" when there is query for the API version
+        //of VirtualBox and represents a valid API version
+        when(vboxMock.getAPIVersion()).thenReturn("4_3");
+        
         
         //nothing should happen after the method connectTo() is called () (no exception invoked)
         sut.connectTo(pm);
     }
     
     /**
-     * Tests that there is ConnectionFailureException exception invoked when there is made an attempt to
-     * connect to physical machine with correct (existing) IP address, web server port of VirtualBox and
-     * user password, but with incorrect username.
+     * Tests that there is ConnectionFailureException exception invoked when there
+     * is made an attempt to connect to physical machine with correct (existing)
+     * IP address, web server port of VirtualBox and user password, but with
+     * incorrect username (with the condition that for the web server port was used
+     * this setting: "vboxmanage setproperty websrvauthlibrary default").
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToExistingPhysicalMachineWithIncorrectUsername(){
-        PhysicalMachine incoPM = new PMBuilder().build();//represents physical machine having incorrect username for its IP address
-        PhysicalMachine coPM = new PMBuilder().username("Mark").build();//represents physical machine having correct username for its IP address        
+    public void connectToExistingPhysicalMachineWithIncorrectUsername() throws ConnectionFailureException,
+                                                                               InterruptedException,
+                                                                               IncompatibleVirtToolAPIVersionException{
+        //represents physical machine having incorrect username for its IP address
+        PhysicalMachine incoPM = new PMBuilder().build();
+        //represents physical machine having correct username for its IP address
+        PhysicalMachine coPM = new PMBuilder().username("Mark").build();
         
-        //if the method connect() is called with physical machine incoPM, then VBoxException will be thrown
+        //if the method VirtualBoxManager::connect() is called with physical machine incoPM,
+        //then VBoxException will be thrown
         doThrow(VBoxException.class).when(vbmMock).connect(anyString(), eq("Jack"), anyString());
         
         //exception with error message that username is incorrect is expected to be invoked
         exception.expect(ConnectionFailureException.class);
         sut.connectTo(incoPM);
         
-        //nothing should happen (no exception invoked), in fact everything should be done in a right way
+        //nothing should happen (no exception invoked),
         exception = ExpectedException.none();
         sut.connectTo(coPM);
     }
@@ -89,15 +139,25 @@ public class NativeVBoxAPIConnectionTest {
     /**
      * Tests that there is ConnectionFailureException exception invoked when there is made an attempt to
      * connect to physical machine with correct (existing) IP address, web server port of VirtualBox and
-     * username, but with incorrect user password.
+     * username, but with incorrect user password (with the condition that for the web server port was used
+     * this setting: "vboxmanage setproperty websrvauthlibrary default").
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
+     * @throws java.lang.InterruptedException
      */
     @Test
-    public void connectToExistingPhysicalMachineWithIncorrectUserPassword(){
-        PhysicalMachine incoPM = new PMBuilder().build();//represents physical machine having incorrect user password for its IP address
-        PhysicalMachine coPM = new PMBuilder().username("Mark").build();//represents physical machine having correct user password for its IP address        
+    public void connectToExistingPhysicalMachineWithIncorrectUserPassword() throws ConnectionFailureException, 
+                                                                                   InterruptedException,
+                                                                                   IncompatibleVirtToolAPIVersionException{
+        //represents physical machine having incorrect user password for its IP address
+        PhysicalMachine incoPM = new PMBuilder().build();
+        //represents physical machine having correct user password for its IP address
+        PhysicalMachine coPM = new PMBuilder().userPassword("1100215asd").build();
         
-        //if the method connect() is called with physical machine incoPM, then VBoxException will be thrown
-        doThrow(VBoxException.class).when(vbmMock).connect(anyString(), eq("Jack"), anyString());
+        //if the method VirtualBoxManager::connect() is called with physical machine incoPM,
+        //then VBoxException will be thrown
+        doThrow(VBoxException.class).when(vbmMock).connect(anyString(), anyString(), eq("tr1h15jk7"));
         
         //exception with error message that user password is incorrect is expected to be invoked
         exception.expect(ConnectionFailureException.class);
@@ -112,11 +172,18 @@ public class NativeVBoxAPIConnectionTest {
      * Tests that there is ConnectionFailureException exception invoked when there is made an attempt to
      * connect to a physical machine with not existing IP address in network or with incorrect number of
      * web server port of VirtualBox.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToNotExistingPhysicalMachine(){
+    public void connectToNotExistingPhysicalMachine() throws ConnectionFailureException,
+                                                             InterruptedException, 
+                                                             IncompatibleVirtToolAPIVersionException{
+        //represents a physical machine with which should be the connection established
         PhysicalMachine pm = new PMBuilder().build();
-        //if the method connect() of class VirtualBoxManager is called with physical machine pm, then it will
+        //if the method VirtualBoxManager::connect() is called with physical machine pm, then it will
         //throw VBoxException as a result
         doThrow(VBoxException.class).when(vbmMock).connect("http://180.148.14.10:18083", "Jack", "tr1h15jk7");
         
@@ -130,15 +197,23 @@ public class NativeVBoxAPIConnectionTest {
      * Tests that there are made more attempts (3 in total) to establish the connection with 
      * a physical machine when the attempt failures and in this case is established
      * in third/last attempt.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToExistingPhysicalMachineAtThirdAttempt(){
+    public void connectToExistingPhysicalMachineAtThirdAttempt() throws ConnectionFailureException,
+                                                                        InterruptedException, 
+                                                                        IncompatibleVirtToolAPIVersionException{
+        //represents a physical machine with which should be the connection established
         PhysicalMachine pm = new PMBuilder().build();
         String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();
+        //mock object of type IVirtualBox for easier and faster testing
         IVirtualBox vboxMock = mock(IVirtualBox.class);
         
-        //if the method connect() of class VirtualBoxManager is called with physical machine pm, then
-        //there will be during first and second connection attempt thrown VBoxException as a result of
+        //if the method VirtualBoxManager::connect() is called with physical machine pm, then
+        //during the first and the second connection attempt there will be thrown VBoxException as a result of
         //unsuccessful connection and in third/last attempt there will not happen anything as a result of
         //successful connection
         doThrow(VBoxException.class).
@@ -148,25 +223,36 @@ public class NativeVBoxAPIConnectionTest {
         //if the method getVBox() is called then returns mocked object of type IVirtualBox in order to ensure
         //that real methods of class IVirtualBox will not be called
         when(vbmMock.getVBox()).thenReturn(vboxMock);
+        //there should be returned a string with value "4_3" when there is query for the API version
+        //of VirtualBox and represents a valid API version
+        when(vboxMock.getAPIVersion()).thenReturn("4_3");
         
         //no exception should be invoked
         sut.connectTo(pm);
         
-        //check the method connect() was called 3 times with the required parameters of physical machine pm
+        //check the method VirtualBoxManager::connect() was called 3 times with the required
+        //parameters of physical machine pm
         verify(vbmMock, times(3)).connect(url, pm.getUsername(), pm.getUserPassword());
     }
     
     /**
      * Tests that there is ConnectionFailureException exception invoked when the connection with physical
      * machine is not successfully established after 3 attempts.
+     * 
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * @throws java.lang.InterruptedException
+     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToInaccessiblePhysicalMachine(){
+    public void connectToInaccessiblePhysicalMachine() throws ConnectionFailureException,
+                                                              InterruptedException, 
+                                                              IncompatibleVirtToolAPIVersionException{
+        //represents a physical machine with which should be established the connection
         PhysicalMachine pm = new PMBuilder().build();
         String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();
         
-        //each time when the method connect() of class VirtualBoxManager is called with physical machine pm,
-        //then there is thrown VBoxException as a unsuccessful result
+        //each time when the method VirtualBoxManager::connect() is called with physical machine pm,
+        //then there is thrown VBoxException as a result and means unsuccess
         doThrow(VBoxException.class).when(vbmMock).connect(url, pm.getUsername(), pm.getUserPassword());
         
         
@@ -175,7 +261,8 @@ public class NativeVBoxAPIConnectionTest {
         exception.expect(ConnectionFailureException.class);
         sut.connectTo(pm);
         
-        //check the method connect() was called 3 times with the required parameters of physical machine pm
+        //check the method VirtualBoxManager::connect() was called 3 times with the required
+        //parameters of physical machine pm
         verify(vbmMock, times(3)).connect(url, pm.getUsername(), pm.getUserPassword());
     }
     
@@ -183,41 +270,31 @@ public class NativeVBoxAPIConnectionTest {
      * Tests that null object of type PhysicalMachine cannot be connected and the IllegalArgumentException
      * exception is thrown as a result.
      */
-    @Test
+    /*@Test
     public void connectToNullPhysicalMachine(){
         exception.expect(IllegalArgumentException.class);
         sut.connectTo(null);
-    }
-    
-    /**
-     * Tests that there is not IncompatibleVirtToolAPIVersionException exception invoked when API version
-     * of VirtualBox matches the required version.
-     */
-    @Test
-    public void connectToWithCompatibleVBoxAPIVersion(){
-        PhysicalMachine pm = new PMBuilder().build();
-        IVirtualBox vboxMock = mock(IVirtualBox.class);
-        
-        //if the method getVBox() is called, then it will return mocked object (vboxMock) of type IVirtualBox as a result
-        when(vbmMock.getVBox()).thenReturn(vboxMock);
-        
-        //if the method getAPIVersion() is called, then string with the value "4_3" will be returned as a result
-        when(vboxMock.getAPIVersion()).thenReturn("4_3");
-        
-        //nothing should happen when the method connectTo() is called (no exception invoked)
-        sut.connectTo(pm);
-    }
+    }*/
     
     /**
     * Tests that there is IncompatibleVirtToolAPIVersionException exception invoked when API version
     * of VirtualBox does not match the required version.
+    * 
+    * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+    * @throws java.lang.InterruptedException
+    * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
     */
     @Test
-    public void connectToWithIncompatibleVBoxAPIVersion(){
+    public void connectToWithIncompatibleVBoxAPIVersion() throws ConnectionFailureException,
+                                                                 InterruptedException, 
+                                                                 IncompatibleVirtToolAPIVersionException{
+        //represents a physical machine with which should be established a connection
         PhysicalMachine pm = new PMBuilder().build();
+        //mock object of type IVirtualBox for easier and faster testing
         IVirtualBox vboxMock = mock(IVirtualBox.class);
         
-        //if method getVBox() is called, then it will return mocked object (vboxMock) of type IVirtualBox as a result
+        //there should be returned a mock object of type IVirtualBox when the method VirtualBoxManager::getVBox()
+        //is called in order to control returned values of its methods
         when(vbmMock.getVBox()).thenReturn(vboxMock);
         
         //if the method getAPIVersion() is called, then string with the value "4_2" will be returned as a result

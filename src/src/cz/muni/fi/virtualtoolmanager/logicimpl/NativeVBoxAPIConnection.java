@@ -16,122 +16,103 @@
 package cz.muni.fi.virtualtoolmanager.logicimpl;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
-import java.util.List;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException;
+import org.virtualbox_4_3.IVirtualBox;
+import org.virtualbox_4_3.VBoxException;
 import org.virtualbox_4_3.VirtualBoxManager;
 
 
 
 /**
- *
+ * This class is used as an interface for the VirtualBox native methods for
+ * connection establishment. In fact, this class and its one method connectTo()
+ * is primarily used for testing whether: 1. A physical machine with which is
+ * required to establish a connection is accessible and can be connected to (it
+ * has a valid key values - IP address, number of web server port of VirtualBox,
+ * username and user password - and the web server port is running and the network
+ * connection is working properly) / 2. The API version of virtualization tool
+ * VirtualBox (the required API version is 4.3., with another API versions this
+ * created API for remote virtual machine control has not to work properly or at
+ * all).
+ * 
  * @author Tomáš Šmíd
  */
 class NativeVBoxAPIConnection {
-    
-    private final VirtualBoxManager virtualBoxManager;
-    
-    public NativeVBoxAPIConnection(){
-        this(VirtualBoxManager.createInstance(null));
-    }
-    
-    NativeVBoxAPIConnection(VirtualBoxManager virtualBoxManager){
-        this.virtualBoxManager = virtualBoxManager;
-    }
-    
-    public void connectTo(PhysicalMachine physicalMachine){
-            throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    /*public void disconnectFrom(PhysicalMachine physicalMachine){
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    public boolean isConnected(PhysicalMachine physicalMachine){
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    public List<PhysicalMachine> getConnectedPhysicalMachines(){
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    VirtualBoxManager getVirtualBoxManager(PhysicalMachine physicalMachine, String errMsg){
-        throw new UnsupportedOperationException("Unsupported operation");
-    }*/
-    
-    /*private void checkPMIsNotNull(PhysicalMachine pm, String errMsg){
-        if(pm == null){
-            throw new IllegalArgumentException(errMsg);
-        }
-    }
-    
-    private VirtualBoxManager validateConnectionToPM(PhysicalMachine pm, String partOfErrMsg) 
-            throws ConnectionFailureException, IncompatibleVirtToolAPIVersionException{
-        
-        String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();
-        VirtualBoxManager vbm = VirtualBoxManager.createInstance(null);
-        IVirtualBox vbox = null;        
-        
-        try{
-            vbm.connect(url, pm.getUsername(), pm.getUserPassword());
-            vbox = vbm.getVBox();
-        }catch(VBoxException ex){
-            throw new ConnectionFailureException(partOfErrMsg + "Most probably there "
-                    + "could be one of two possible problems - "
-                    + "network connection is not working or remote VirtualBox "
-                    + "web server is not running.");
-        }
-        
-        if(!vbox.getAPIVersion().equals("4_3")){
-            throw new IncompatibleVirtToolAPIVersionException("Incompatible version of "
-                    + "VirtualBox API: Required VBox API version is 4_3, but actual "
-                    + "VirtualBox API version is " + vbox.getAPIVersion() + ". "
-                    + "There is no guarantee this API would work with incompatible "
-                    + "VirtualBox API version correctly, that's why this physical machine "
-                    + " has not been connected and thus cannot be operated with.");
-        }
-        
-        return vbm;
-    }
-    
-    private VirtualBoxManager tryToConnectTo(PhysicalMachine pm, String partOfErrMsg) 
-            throws ConnectionFailureException, InterruptedException, IncompatibleVirtToolAPIVersionException{
-        
-        VirtualBoxManager vbm = null;        
-        AccessedPhysicalMachines apm = AccessedPhysicalMachines.getInstance();
-        int attempt = 0;
-        
-        while(attempt < 3){
-            try{
-                vbm = validateConnectionToPM(pm,partOfErrMsg);
-                break;
-            }catch(ConnectionFailureException ex){
-                ++attempt;
-                if(attempt == 3){
-                    apm.remove(pm);//if connected, then will be removed, otherwise nothing will happen
-                    throw ex;
-                }else{
-                    Thread.sleep(5000l);
+    /**
+     * This method ensures the connection establishment with a required physical
+     * machine.
+     * 
+     * @param physicalMachine represents a physical machine with which is required
+     * to establish a connection in order to remotely control virtual machines located
+     * on this physical machine
+     * @throws ConnectionFailureException is invoked if the physical machine with which
+     * is required to establish a connection has any key value (IP address, number of
+     * web server port, username or user password) wrong or if there is not possible
+     * to connect to the physical machine because of the network connection which is
+     * not working properly or because of not running web server
+     * @throws InterruptedException if any thread interrupted the current thread which
+     * manages the connection establishment with a required physical machine
+     * @throws IncompatibleVirtToolAPIVersionException is invoked if there is a wrong
+     * API version of virtualization tool VirtualBox on the physical machine
+     */ 
+    public void connectTo(PhysicalMachine physicalMachine) throws ConnectionFailureException,
+                                                                  InterruptedException,
+                                                                  IncompatibleVirtToolAPIVersionException{
+            //number of attempts for connection establishment, max. number of attempts is 3
+            int attempt = 1;
+            //url of the physical machine used for connecting to it
+            String url = "http://" + physicalMachine.getAddressIP() + ":" 
+                    + physicalMachine.getPortOfVTWebServer();
+            //object from the native VirtualBox API which manages the connection establishment
+            VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
+            
+            //max. 3 attempts to try to connect to the physical machine
+            do{
+                try{
+                    //connect to the VirtualBox web server on the physical machine
+                    virtualBoxManager.connect(url, physicalMachine.getUsername(),
+                                              physicalMachine.getUserPassword());
+                    //if connected successfully, then end the cycle
+                    break;
+                }catch(VBoxException ex){//there occured any problem while connecting to the physical machine, more info at head of the method connectTo()
+                    ++attempt;
+                    //if there any attempt for connection establishment left, then wait for 1,5 s and
+                    //then try to connect to the physical machine again
+                    if(attempt < 4){
+                        Thread.sleep(1500l);
+                    }
                 }
-            }catch(IncompatibleVirtToolAPIVersionException ex){
-                apm.remove(pm);//if connected, then will be removed, otherwise nothing will happen 
-                throw ex;
+            }while(attempt < 4);
+                        
+            if(attempt > 3){
+                throw new ConnectionFailureException("Unable to establish a connection "
+                        + "with a physical machine " + physicalMachine + ". Most "
+                        + "probably there occured one of these problems: 1. Network "
+                        + "connection is not working properly or at all / 2. Physical "
+                        + "machine has some key value (IP address, number of VirtualBox "
+                        + "web server port, username or user password) wrong / "
+                        + "3. There is not running a VirtualBox web server on physical "
+                        + "machine " + physicalMachine + ".");
             }
-        }
-        
-        return vbm;
+            
+            //get the instance of the VirtualBox from the physical machine (for API version check)
+            IVirtualBox vbox = virtualBoxManager.getVBox();
+            
+            if(!vbox.getAPIVersion().equals("4_3")){
+                throw new IncompatibleVirtToolAPIVersionException("Incompatible version "
+                        + "of VirtualBox API: The required VirtualBox API version is 4_3, "
+                        + "but the actual VirtualBox API version is " + vbox.getAPIVersion()
+                        + ". There is no guarantee this API would work with incorrect "
+                        + "VirtualBox API version correctly, that's why this physical machine "
+                        + "has not been connected and thus there cannot be done any work with "
+                        + "virtual machines.");
+            }
+            
+            //physical machine is ready for any remote operation with virtual machines
+            //so now disconnect from the web server in order to connect to it again
+            //from another point in a program and differrent order
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
     }
-    
-    private void stopRunningVMs(PhysicalMachine pm){
-        VirtualizationToolManager vtm = new VirtualizationToolManagerImpl(pm);
-        List<VirtualMachine> vms = vtm.getVirtualMachines();
-        VirtualMachineManager vmm = vtm.getVirtualMachineManager();
-        
-        if(!vms.isEmpty()){
-            for(VirtualMachine vm : vms){
-                String ms = vmm.getVMState(vm);
-                if (ms.equals("Running") || ms.equals("Paused") || ms.equals("Stuck")) {
-                    vmm.shutDownVM(vm);
-                }
-            }
-        }
-    }*/
 }

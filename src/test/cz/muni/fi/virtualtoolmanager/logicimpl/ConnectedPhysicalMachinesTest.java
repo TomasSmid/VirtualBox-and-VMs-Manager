@@ -27,7 +27,9 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
 /**
- *
+ * This test class ensure unit testing of class ConnectedPhysicalMachines and
+ * is intended to be a pointer that class ConnectedPhysicalMachines works as expected.
+ * 
  * @author Tomáš Šmíd
  */
 public class ConnectedPhysicalMachinesTest {
@@ -57,65 +59,119 @@ public class ConnectedPhysicalMachinesTest {
         }
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::add() is
+     * called with a non-null physical machine then this physical machine is
+     * correctly added to the list of connected physical machines.
+     */
     @Test
     public void addPhysicalMachineWithValidArgument(){
+        //represents a physical machine which should be added to the list of connected physical machines
         PhysicalMachine pm = new PMBuilder().build();
-        physicalMachines.add(pm); //for after test cleanup
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm);
         
         assertNotNull("Physical machine " + pm.toString() + " should be correctly instantiated, not null",pm);
-        assertFalse("Physical machine " + pm.toString() + " should not be accessed", sut.isConnected(pm));
+        assertFalse("Physical machine " + pm.toString() + " should not be connected", sut.isConnected(pm));
         
         sut.add(pm);
-        assertTrue("Physical machine " + pm.toString() + " should be accessed",sut.isConnected(pm));
+        assertTrue("Physical machine " + pm.toString() + " should be connected",sut.isConnected(pm));
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::add() is
+     * called with a null physical machine then this physical machine is not added
+     * to the list of connected physical machines, but there is thrown an
+     * IllegalArgumentException exception.
+     */
     @Test
     public void addNullPhysicalMachine(){
         exception.expect(IllegalArgumentException.class);
         sut.add(null);
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::remove() is
+     * called with a non-null physical machine which is in the list of connected
+     * physical machines then this physical machine is removed from that list and
+     * if there are another machines then these are not affected by this operation.
+     */
     @Test
     public void removeValidConnectedPhysicalMachine(){
+        //represents a physical machine which should both added to and later removed from the list of connected physical machines
         PhysicalMachine pm1 = new PMBuilder().build();
+        //represents a physical machine which should be just added to the list of connected physical machines
         PhysicalMachine pm2 = new PMBuilder().addressIP("140.150.10.10").username("").userPassword("").build();
-        physicalMachines.add(pm1);//for after test cleanup
-        physicalMachines.add(pm2);//for after test cleanup
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm1);
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm2);
         
-        assertFalse("Physical machine " + pm1.toString() + " should not be accessed (it has not been added to the list of accessed physical machines yet)", sut.isConnected(pm1));
-        assertFalse("Physical machine " + pm2.toString() + " should not be accessed (it has not been added to the list of accessed physical machines yet)", sut.isConnected(pm2));
+        assertFalse("Physical machine " + pm1.toString() + " should not be connected "
+                + "(it has not been added to the list of connected physical machines yet)", sut.isConnected(pm1));
+        assertFalse("Physical machine " + pm2.toString() + " should not be connected "
+                + "(it has not been added to the list of connected physical machines yet)", sut.isConnected(pm2));
         
         sut.add(pm1);
         sut.add(pm2);
         
-        assertTrue("Physical machine " + pm1.toString() + " should be accessed (it has already been added to the list of accessed physical machines)",sut.isConnected(pm1));
-        assertTrue("Physical machine " + pm2.toString() + " should be accessed (it has already been added to the list of accessed physical machines)",sut.isConnected(pm2));
+        assertTrue("Physical machine " + pm1.toString() + " should be connected "
+                + "(it has already been added to the list of connected physical machines)",sut.isConnected(pm1));
+        assertTrue("Physical machine " + pm2.toString() + " should be connected "
+                + "(it has already been added to the list of connected physical machines)",sut.isConnected(pm2));
         
-        assertTrue("Physical machine " + pm1.toString() + " should be successfully removed, but it is not",sut.remove(pm1));
+        assertTrue("Physical machine " + pm1.toString() + " should be successfully removed, "
+                + "but it is not",sut.remove(pm1));
         
-        assertFalse("Physical machine " + pm1.toString() + " should not be accessed, because it has been removed from the list of accessed physical machines", sut.isConnected(pm1));
-        assertTrue("Physical machine " + pm2.toString() + " should be accessed",sut.isConnected(pm2));
+        assertFalse("Physical machine " + pm1.toString() + " should not be connected, "
+                + "because it has been removed from the list of connected physical machines", sut.isConnected(pm1));
+        assertTrue("Physical machine " + pm2.toString() + " should be connected",sut.isConnected(pm2));
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::remove() is
+     * called (typically as a part of physical machine disconnection operation)
+     * with a physical machine which is not connected, then this physical machine
+     * cannot be removed from the list of connected physical machines (disconnected),
+     * because it is not in that list.
+     */
     @Test
     public void removeValidNotConnectedPhysicalMachine(){
+        //represents a physical machine which is not connected and should be removed from
+        //the list of connected physical machines (disconnected)
         PhysicalMachine pm1 = new PMBuilder().build();
+        //represents a physical machine which is connected and is used to show
+        //that unsuccessful remove operation cannot affect another connected physical machines
         PhysicalMachine pm2 = new PMBuilder().addressIP("140.150.10.10").username("").userPassword("").build();
-        physicalMachines.add(pm2);//for after test cleanup        
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm2);
         
         sut.add(pm2);
         
         assertFalse("Physical machine " + pm1.toString() + " should not be possible to remove, "
-                  + "because it should not be accessed",sut.remove(pm1));
+                  + "because it should not be connected",sut.remove(pm1));
         
-        assertFalse("Physical machine " + pm1.toString() + " should not be accessed", sut.isConnected(pm1));
-        assertTrue("Physical machine " + pm2.toString() + " should be accessed",sut.isConnected(pm2));
+        assertFalse("Physical machine " + pm1.toString() + " should not be connected", sut.isConnected(pm1));
+        assertTrue("Physical machine " + pm2.toString() + " should be connected",sut.isConnected(pm2));
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::remove() is
+     * called with a null physical machine, then this physical machine cannot be
+     * removed and there is thrown an IllegalArgumentException exception.
+     */
     @Test
     public void removeNullPhysicalMachine(){
+        //represents a physical machine which is connected and is used to show
+        //that unsuccessful remove operation cannot affect another connected physical machines
         PhysicalMachine pm = new PhysicalMachine("140.150.12.0","10000","Hornd","140nb48");
-        physicalMachines.add(pm);//for after test cleanup
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm);
         
         sut.add(pm);
         
@@ -123,30 +179,54 @@ public class ConnectedPhysicalMachinesTest {
         sut.remove(null);
         
         exception = ExpectedException.none();
-        assertTrue("Physical machine " + pm.toString() + " should be accessed",sut.isConnected(pm));
+        assertTrue("Physical machine " + pm.toString() + " should be connected",sut.isConnected(pm));
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::isConnected()
+     * is called with a non-null not connected physical machine, then there is
+     * returned a negative answer.
+     */
     @Test
     public void isMachineConnectedWithValidNotConnectedPhysicalMachine(){
+        //represents a physical machine which should be queried if it is connected
         PhysicalMachine pm = new PMBuilder().build();
         
         assertNotNull("Physical machine " + pm.toString() + " should be correctly instantiated, not null",pm);
-        assertFalse("Physical machine " + pm.toString() + " should not be accessed", sut.isConnected(pm));        
+        assertFalse("Physical machine " + pm.toString() + " should not be connected", sut.isConnected(pm));        
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::isConnected()
+     * is called with a non-null connected physical machine, then there is
+     * returned a positive answer.
+     */
     @Test
     public void isMachineConnectedWithValidConnectedPhysicalMachine(){
+        //represents a physical machine which should be queried if it is connected
         PhysicalMachine pm = new PMBuilder().build();
-        physicalMachines.add(pm);//for after test cleanup        
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm);     
         
         sut.add(pm);
-        assertTrue("Physical machine " + pm.toString() + " should be accessed",sut.isConnected(pm));
+        assertTrue("Physical machine " + pm.toString() + " should be connected",sut.isConnected(pm));
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::isConnected()
+     * is called with a null physical machine, then this physical machine represents
+     * an invalid physical machine which cannot be queried for its accessibility.
+     */
     @Test
     public void isMachineConnectedWithNullPhysicalMachine(){
+        //represents a physical machine which is connected and is used to show
+        //that unsuccessful query operation for physical machine accessibility
+        //cannot affect another connected physical machines
         PhysicalMachine pm = new PMBuilder().build();
-        physicalMachines.add(pm);//for after test cleanup
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm);
         
         sut.add(pm);
         
@@ -154,17 +234,28 @@ public class ConnectedPhysicalMachinesTest {
         sut.isConnected(null);
         
         exception = ExpectedException.none();
-        assertTrue("Physical machine " + pm.toString() + " should be accessed",sut.isConnected(pm));
+        assertTrue("Physical machine " + pm.toString() + " should be connected",sut.isConnected(pm));
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::getConnectedPhysicalMachines()
+     * is called when there are some connected physical machines, then these are
+     * returned as result of the method call.
+     */
     @Test
     public void getConnectedPhysicalMachinesWithNonemptyPMsListBasic(){
+        //represents the first of two connected physical machines
         PhysicalMachine pm1 = new PMBuilder().build();
+        //represents the second of two connected physical machines 
         PhysicalMachine pm2 = new PMBuilder().addressIP("10.0.0.10").webserverPort("1154")
                                              .username("").userPassword("").build();        
         
-        physicalMachines.add(pm1);//for after test cleanup
-        physicalMachines.add(pm2);//for after test cleanup
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm1);
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm2);
         
         sut.add(pm1);
         sut.add(pm2);
@@ -175,13 +266,24 @@ public class ConnectedPhysicalMachinesTest {
         assertListsEquals(expectedList,actualList);
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::getConnectedPhysicalMachines()
+     * is called closely after deletion operation, but there stay some connected
+     * physical machines, then there is returned a non-empty list of connected
+     * physical machines with the correct number of connected machines.
+     */
     @Test
     public void getConnectedPhysicalMachinesWithNonemptyPMsListAfterPMDeletion(){
+        //represents a physical machine which is added to the list of connected physical machines,
+        //but later is removed
         PhysicalMachine pm1 = new PMBuilder().build();
+        //represents a connected physical machine
         PhysicalMachine pm2 = new PMBuilder().addressIP("10.0.0.10").webserverPort("1154")
                                              .username("").userPassword("").build();
         
-        physicalMachines.add(pm2);//for after test cleanup
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm2);
         
         sut.add(pm1);
         sut.add(pm2);
@@ -191,41 +293,72 @@ public class ConnectedPhysicalMachinesTest {
         List<PhysicalMachine> expectedList = Arrays.asList(pm2);
         List<PhysicalMachine> actualList = sut.getConnectedPhysicalMachines();
         
-        assertListsEquals(expectedList,actualList);        
+        assertListsEquals(expectedList,actualList);
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::getConnectedPhysicalMachines()
+     * is called when there is no connected physical machine, then there is returned
+     * an empty list of connected physical machines.
+     */
     @Test
     public void getConnectedPhysicalMahcinesWithEmptyPMsList(){
-        assertTrue("List of accessed physical machines should be empty",
+        assertTrue("List of connected physical machines should be empty",
                    sut.getConnectedPhysicalMachines().isEmpty());
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::getConnectedPhysicalMachines()
+     * is called closely after deletion operation and there is no connected
+     * physical machine after that, then there is returned an empty list of
+     * connected physical machines.
+     */
     @Test
     public void getConnectedPhysicalMachinesWithEmptyPMsListAfterPMDeletion(){
+        //represents a physical machine which is added to the list of connected physical machines,
+        //but later is removed
         PhysicalMachine pm = new PMBuilder().build();
         
         sut.add(pm);        
-        assertFalse("List of accessed physical machines should not be empty",
+        assertFalse("List of connected physical machines should not be empty",
                     sut.getConnectedPhysicalMachines().isEmpty());
         
         sut.remove(pm);
-        assertTrue("List of accessed physical machines should be empty after deletion of last machine in list",
+        assertTrue("List of connected physical machines should be empty after deletion of last machine in list",
                     sut.getConnectedPhysicalMachines().isEmpty());
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::getConnectedPhysicalMachines()
+     * is called after an unsuccessful attempt to add a null physical machine to
+     * the list of connected physical machines and there was no connected physical
+     * machine before, then there is returned an empty list of connected physical
+     * machines.
+     */
     @Test
     public void getConnectedPhysicalMachinesWithEmptyPMsListAfterNullPMAdditionToEmptyList(){
         exception.expect(IllegalArgumentException.class);
         sut.add(null);
         
-        assertTrue("List of accessed physical machines should be still empty after null physical machine addition",
-                    sut.getConnectedPhysicalMachines().isEmpty());
+        assertTrue("List of connected physical machines should be still empty after null "
+                + "physical machine addition", sut.getConnectedPhysicalMachines().isEmpty());
     }
     
+    /**
+     * This test tests that if the method ConnectedPhysicalMachines::getConnectedPhysicalMachines()
+     * is called closely after an attempt to add a null physical machine to the
+     * non-empty list of connected physical machines, then there is returned
+     * the non-empty list of connected physical machines with a correct number
+     * of connected machines.
+     */
     @Test
-    public void getConnectedPhysicalMachinesWithEmptyPMsListAfterNullPMAdditionToNonemptyList(){
+    public void getConnectedPhysicalMachinesWithNonemptyPMsListAfterNullPMAdditionToNonemptyList(){
+        //represents a physical machine which is connected and is used to show
+        //that unsuccessful retrieve operation cannot affect another connected physical machines
         PhysicalMachine pm = new PMBuilder().build();
-        physicalMachines.add(pm);//for after test cleanup
+        //physical machine pm is added to the list "physicalMachines" for after test cleanup
+        //and keeping the consistent environment for testing
+        physicalMachines.add(pm);
         
         sut.add(pm);
         exception.expect(IllegalArgumentException.class);

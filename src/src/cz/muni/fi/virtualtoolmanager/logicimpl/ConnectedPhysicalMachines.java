@@ -26,44 +26,60 @@ import java.util.List;
 public class ConnectedPhysicalMachines {
     
     private static final ConnectedPhysicalMachines INSTANCE = new ConnectedPhysicalMachines();
-    private static List<PhysicalMachine> accessedPhysicalMachines = new ArrayList<>();
+    private static List<PhysicalMachine> connectedPhysicalMachines = new ArrayList<>();
     
     public static ConnectedPhysicalMachines getInstance(){
         return INSTANCE;
     }
     
-    /*private static void addAPM(PhysicalMachine physicalMachine){
-        accessedPhysicalMachines.add(physicalMachine);
+    private static void addCPM(PhysicalMachine physicalMachine){
+        connectedPhysicalMachines.add(physicalMachine);
     }
     
-    private static boolean removeAPM(PhysicalMachine physicalMachine){       
-        accessedPhysicalMachines.remove(physicalMachine);
-        return true;
+    private static boolean removeCPM(PhysicalMachine physicalMachine){       
+        return connectedPhysicalMachines.remove(physicalMachine);        
     }
     
-    private static boolean isAccessedPM(PhysicalMachine physicalMachine){
-        return accessedPhysicalMachines.contains(physicalMachine);
+    private static boolean isConnectedPM(PhysicalMachine physicalMachine){
+        return connectedPhysicalMachines.contains(physicalMachine);
     }
     
-    private static List<PhysicalMachine> getAccessedPMs(){
-        return accessedPhysicalMachines;
-    }*/
+    private static List<PhysicalMachine> getConnectedPMs(){
+        return connectedPhysicalMachines;
+    }
     
     private ConnectedPhysicalMachines(){ }
     
     public void add(PhysicalMachine physicalMachine){
-        throw new UnsupportedOperationException("Unsupported operation");
+        if(physicalMachine == null){
+            throw new IllegalArgumentException("There was made an attempt to add "
+                            + "a null physical machine to the list of connected "
+                            + "physical machines.");
+        }
+        
+        addCPM(physicalMachine);
     }
     
     public boolean remove(PhysicalMachine physicalMachine){
-        throw new UnsupportedOperationException("Unsupported operation");
+        if(physicalMachine == null){
+            throw new IllegalArgumentException("There was made an attempt to remove "
+                            + "a null physical machine from the list of connected "
+                            + "physical machines.");
+        }
+        
+        return removeCPM(physicalMachine);
     }
     
     public boolean isConnected(PhysicalMachine physicalMachine){
-        throw new UnsupportedOperationException("Unsupported operation");
+        if(physicalMachine == null){
+            throw new IllegalArgumentException("There was made an attempt to find "
+                            + "out if a null physical machine is connected.");
+        }
+        
+        return isConnectedPM(physicalMachine);
     }
     
     public List<PhysicalMachine> getConnectedPhysicalMachines(){
-        throw new UnsupportedOperationException("Unsupported operation");
+        return getConnectedPMs();
     }
 }
