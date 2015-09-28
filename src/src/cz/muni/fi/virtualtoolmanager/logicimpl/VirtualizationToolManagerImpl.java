@@ -45,6 +45,12 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
         this.connectionManager = connectionManager;
     }
     
+    /*private final PhysicalMachine hostMachine;
+    
+    VirtualizationToolManagerImpl(PhysicalMachine hostMachine){
+        this.hostMachine = hostMachine;
+    }*/
+    
     @Override
     public void registerVirtualMachine(String name) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
@@ -77,6 +83,11 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
 
     @Override
     public VirtualMachineManager getVirtualMachineManager() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void close() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     

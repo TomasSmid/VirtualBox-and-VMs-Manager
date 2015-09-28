@@ -21,6 +21,10 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  */
 public class IncompatibleVirtToolAPIVersionException extends Exception{
     
+    public IncompatibleVirtToolAPIVersionException(){
+        super();
+    }
+    
     public IncompatibleVirtToolAPIVersionException(String msg){
         super(msg);
     }

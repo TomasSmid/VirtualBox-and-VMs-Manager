@@ -21,6 +21,10 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  */
 public class ConnectionFailureException extends Exception{
     
+    public ConnectionFailureException(){
+        super();
+    }
+    
     public ConnectionFailureException(String msg){
         super(msg);
     }

@@ -50,16 +50,61 @@ class NativeVBoxAPIConnection {
      * is required to establish a connection has any key value (IP address, number of
      * web server port, username or user password) wrong or if there is not possible
      * to connect to the physical machine because of the network connection which is
-     * not working properly or because of not running web server
-     * @throws InterruptedException if any thread interrupted the current thread which
-     * manages the connection establishment with a required physical machine
+     * not working properly or because of not running web server     
      * @throws IncompatibleVirtToolAPIVersionException is invoked if there is a wrong
      * API version of virtualization tool VirtualBox on the physical machine
      */ 
     public void connectTo(PhysicalMachine physicalMachine) throws ConnectionFailureException,
-                                                                  InterruptedException,
                                                                   IncompatibleVirtToolAPIVersionException{
-            //number of attempts for connection establishment, max. number of attempts is 3
+            //url of the physical machine used for connecting to it
+            String url = "http://" + physicalMachine.getAddressIP() + ":" 
+                    + physicalMachine.getPortOfVTWebServer();
+            //object from the native VirtualBox API which manages the connection establishment
+            VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
+            
+            try{
+                //connect to the VirtualBox web server which should be running on the physical machine physicalMachine
+                virtualBoxManager.connect(url, physicalMachine.getUsername(),
+                                          physicalMachine.getUserPassword());
+            }catch (VBoxException ex){//there occured any problem while connecting to the physical machine, more info at head of the method connectTo()
+                throw new ConnectionFailureException("Connection operation failure: "
+                        + "Unable to establish a connection with a physical machine "
+                        + physicalMachine + ". Most probably there occured one of "
+                        + "these problems: 1. Network connection is not working "
+                        + "properly or at all / 2. Physical machine has some key "
+                        + "value (IP address, number of VirtualBox web server port, "
+                        + "username or user password) wrong / 3. There is not running "
+                        + "a VirtualBox web server on physical machine " 
+                        + physicalMachine + ".");
+            }finally{
+                //ends the connection (if successful) with the physical machine and cleans up after itself
+                virtualBoxManager.disconnect();
+                virtualBoxManager.cleanup();
+            }
+            
+            IVirtualBox vbox = virtualBoxManager.getVBox();
+            
+            if(!vbox.getAPIVersion().equals("4_3")){
+                //ends the connection with the physical machine and cleans up after itself
+                virtualBoxManager.disconnect();
+                virtualBoxManager.cleanup();
+                throw new IncompatibleVirtToolAPIVersionException("Incompatible version "
+                        + "of VirtualBox API: The required VirtualBox API version is 4_3, "
+                        + "but the actual VirtualBox API version is " + vbox.getAPIVersion()
+                        + ". There is no guarantee this API would work with incorrect "
+                        + "VirtualBox API version correctly, that's why this physical machine "
+                        + "has not been connected and thus there cannot be done any work with "
+                        + "virtual machines.");
+            }
+            
+            //ends the connection with the physical machine and cleans up after itself - now
+            //the physical machine becomes one of the successfully connected physical machines
+            //and there is possible to work with virtual machines located on this physical
+            //machine
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            
+            /*//number of attempts for connection establishment, max. number of attempts is 3
             int attempt = 1;
             //url of the physical machine used for connecting to it
             String url = "http://" + physicalMachine.getAddressIP() + ":" 
@@ -86,14 +131,15 @@ class NativeVBoxAPIConnection {
             }while(attempt < 4);
                         
             if(attempt > 3){
-                throw new ConnectionFailureException("Unable to establish a connection "
-                        + "with a physical machine " + physicalMachine + ". Most "
-                        + "probably there occured one of these problems: 1. Network "
-                        + "connection is not working properly or at all / 2. Physical "
-                        + "machine has some key value (IP address, number of VirtualBox "
-                        + "web server port, username or user password) wrong / "
-                        + "3. There is not running a VirtualBox web server on physical "
-                        + "machine " + physicalMachine + ".");
+                throw new ConnectionFailureException("Connection operation failure: "
+                        + "Unable to establish a connection with a physical machine "
+                        + physicalMachine + ". Most probably there occured one of "
+                        + "these problems: 1. Network connection is not working "
+                        + "properly or at all / 2. Physical machine has some key "
+                        + "value (IP address, number of VirtualBox web server port, "
+                        + "username or user password) wrong / 3. There is not running "
+                        + "a VirtualBox web server on physical machine " 
+                        + physicalMachine + ".");
             }
             
             //get the instance of the VirtualBox from the physical machine (for API version check)
@@ -113,6 +159,8 @@ class NativeVBoxAPIConnection {
             //so now disconnect from the web server in order to connect to it again
             //from another point in a program and differrent order
             virtualBoxManager.disconnect();
-            virtualBoxManager.cleanup();
+            virtualBoxManager.cleanup();*/
     }
+    /* @throws InterruptedException if any thread interrupted the current thread which
+     * manages the connection establishment with a required physical machine*/
 }
