@@ -21,6 +21,10 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  */
 public class UnknownVirtualMachineException extends Exception{
     
+    public UnknownVirtualMachineException(){
+        super();
+    }
+    
     public UnknownVirtualMachineException(String msg){
         super(msg);
     }

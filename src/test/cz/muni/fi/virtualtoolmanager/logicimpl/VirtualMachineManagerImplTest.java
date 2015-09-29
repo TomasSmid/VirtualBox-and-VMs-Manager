@@ -101,7 +101,7 @@ public class VirtualMachineManagerImplTest {
      * output appears an error informing message.
      */
     @Test
-    public void startNullVM() {
+    public void startNullVM() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
 
         sut.startVM(null);
 
@@ -220,7 +220,7 @@ public class VirtualMachineManagerImplTest {
      * informing message.
      */
     @Test
-    public void startNonexistentVM() {
+    public void startNonexistentVM() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -246,7 +246,7 @@ public class VirtualMachineManagerImplTest {
      * ended and on a standard error output appears an error informing message.
      */
     @Test
-    public void startInaccessibleVM() {
+    public void startInaccessibleVM() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -273,7 +273,7 @@ public class VirtualMachineManagerImplTest {
      * and on a standard error output appears an error informing message.
      */
     @Test
-    public void startVMWithInvalidState() {
+    public void startVMWithInvalidState() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -301,7 +301,7 @@ public class VirtualMachineManagerImplTest {
      * error informing message.
      */
     @Test
-    public void startAlreadyLockedVM() {
+    public void startAlreadyLockedVM() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -330,7 +330,7 @@ public class VirtualMachineManagerImplTest {
      * informing message.
      */
     @Test
-    public void startVMOnDisconnectedPhysicalMachine() {
+    public void startVMOnDisconnectedPhysicalMachine() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -357,7 +357,7 @@ public class VirtualMachineManagerImplTest {
      * error output appears an error informing message.
      */
     @Test
-    public void startVMWithSuddenNetworkConnectionLossOuterCheck() {
+    public void startVMWithSuddenNetworkConnectionLossOuterCheck() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -387,7 +387,7 @@ public class VirtualMachineManagerImplTest {
      * and on a standard error output appears an error informing message.
      */
     @Test
-    public void startVMWithSuddenNetworkConnectionLossInnerCheck() {
+    public void startVMWithSuddenNetworkConnectionLossInnerCheck() throws ConnectionFailureException, UnknownVirtualMachineException, UnexpectedVMStateException {
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -437,9 +437,11 @@ public class VirtualMachineManagerImplTest {
      * is called with a null virtual machine argument then the virtual machine
      * shutdown operation itself is not even started and on a standard error
      * output appears an error informing message.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownNullVM() {
+    public void shutDownNullVM() throws Exception {
 
         sut.shutDownVM(null);
 
@@ -558,7 +560,7 @@ public class VirtualMachineManagerImplTest {
      * informing message.
      */
     @Test
-    public void shutDownNonexistentVM() {
+    public void shutDownNonexistentVM() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
 
@@ -584,7 +586,7 @@ public class VirtualMachineManagerImplTest {
      * ended and on a standard error output appears an error informing message.
      */
     @Test
-    public void shutDownInaccessibleVM() {
+    public void shutDownInaccessibleVM() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
 
@@ -611,7 +613,7 @@ public class VirtualMachineManagerImplTest {
      * operation is ended and on a standard error output appears an error informing message.
      */
     @Test
-    public void shutDownVMWithInvalidState() {
+    public void shutDownVMWithInvalidState() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
 
@@ -640,7 +642,7 @@ public class VirtualMachineManagerImplTest {
      * informing message.
      */
     @Test
-    public void shutDownVMOnDisconnectedPhysicalMachine() {
+    public void shutDownVMOnDisconnectedPhysicalMachine() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
 
@@ -667,7 +669,7 @@ public class VirtualMachineManagerImplTest {
      * error output appears an error informing message.
      */
     @Test
-    public void shutDownVMWithSuddenNetworkConnectionLossOuterCheck() {
+    public void shutDownVMWithSuddenNetworkConnectionLossOuterCheck() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
 
@@ -697,7 +699,7 @@ public class VirtualMachineManagerImplTest {
      * and on a standard error output appears an error informing message.
      */
     @Test
-    public void shutDownVMWithSuddenNetworkConnectionLossInnerCheck() {
+    public void shutDownVMWithSuddenNetworkConnectionLossInnerCheck() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
 
@@ -753,7 +755,7 @@ public class VirtualMachineManagerImplTest {
      * informing error message.
      */
     @Test
-    public void addPortRuleWithNullVirtualMachine() {
+    public void addPortRuleWithNullVirtualMachine() throws Exception {
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01",22,1540).build();
         
@@ -798,7 +800,7 @@ public class VirtualMachineManagerImplTest {
      * operation is ended and on a standard error output appears an informing error message.
      */
     @Test
-    public void addPortRuleWithNonexistentVMGetter(){
+    public void addPortRuleWithNonexistentVMGetter() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -830,7 +832,7 @@ public class VirtualMachineManagerImplTest {
      * informing error message.
      */
     @Test
-    public void addPortRuleWithNonexistentVMAddition() {
+    public void addPortRuleWithNonexistentVMAddition() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -860,7 +862,7 @@ public class VirtualMachineManagerImplTest {
      * informing error message.
      */
     @Test
-    public void addNullPortRule() {
+    public void addNullPortRule() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         
@@ -880,7 +882,7 @@ public class VirtualMachineManagerImplTest {
      * informing error message.
      */
     @Test
-    public void addPortRuleWithNullName() {
+    public void addPortRuleWithNullName() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -902,7 +904,7 @@ public class VirtualMachineManagerImplTest {
      * informing error message.
      */
     @Test
-    public void addPortRuleWithEmptyName() {
+    public void addPortRuleWithEmptyName() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -924,7 +926,7 @@ public class VirtualMachineManagerImplTest {
      * on a standard error output appears an informing error message.
      */
     @Test
-    public void addPortRuleWithInvalidHostPortNumberNegative() {
+    public void addPortRuleWithInvalidHostPortNumberNegative() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -947,7 +949,7 @@ public class VirtualMachineManagerImplTest {
      * on a standard error output appears an informing error message.
      */
     @Test
-    public void addPortRuleWithInvalidHostPortNumberTooBig() {
+    public void addPortRuleWithInvalidHostPortNumberTooBig() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -970,7 +972,7 @@ public class VirtualMachineManagerImplTest {
      * on a standard error output appears an informing error message.
      */
     @Test
-    public void addPortRuleWithInvalidGuestPortNumberNegative() {
+    public void addPortRuleWithInvalidGuestPortNumberNegative() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -993,7 +995,7 @@ public class VirtualMachineManagerImplTest {
      * on a standard error output appears an informing error message.
      */
     @Test
-    public void addPortRuleWithInvalidGuestPortNumberTooBig() {
+    public void addPortRuleWithInvalidGuestPortNumberTooBig() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1016,7 +1018,7 @@ public class VirtualMachineManagerImplTest {
      * on a standard error output appears an informing error message.
      */
     @Test
-    public void addPortRuleWithDuplicitName() {
+    public void addPortRuleWithDuplicitName() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1047,7 +1049,7 @@ public class VirtualMachineManagerImplTest {
      * on a standard error output appears an informing error message.
      */
     @Test
-    public void addPortRuleWithDuplicitHostPortNumber() {
+    public void addPortRuleWithDuplicitHostPortNumber() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1079,7 +1081,7 @@ public class VirtualMachineManagerImplTest {
      * informing error message.
      */
     @Test
-    public void addPortRuleWithInvalidAttachmentType() {
+    public void addPortRuleWithInvalidAttachmentType() throws Exception {
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1112,7 +1114,7 @@ public class VirtualMachineManagerImplTest {
      * error output appears an error informing message.
      */
     @Test
-    public void addPortRuleOnDisconnectedPhysicalMachine() {
+    public void addPortRuleOnDisconnectedPhysicalMachine() throws Exception {
         //represents a virtual machine to which should be added a new port rule        
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1141,7 +1143,7 @@ public class VirtualMachineManagerImplTest {
      * is not even started and on a standard error output appears an error informing message.
      */
     @Test
-    public void addPortRuleWithSuddenNetworkConnectionLossOuterCheck() {
+    public void addPortRuleWithSuddenNetworkConnectionLossOuterCheck() throws Exception {
         //represents a virtual machine to which should be added a new port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1174,7 +1176,7 @@ public class VirtualMachineManagerImplTest {
      * iself is not even started and on a standard error output appears an error informing message.
      */
     @Test
-    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckGetter() {        
+    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckGetter() throws Exception {        
         //represents a virtual machine to which should be added a new port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1209,7 +1211,7 @@ public class VirtualMachineManagerImplTest {
      * output appears an error informing message.
      */
     @Test
-    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckAddition() {
+    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckAddition() throws Exception {
         //represents a virtual machine to which should be added a new port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1264,7 +1266,7 @@ public class VirtualMachineManagerImplTest {
      * informing error message.
      */
     @Test
-    public void deletePortRuleWithNullVirtualMachine() {
+    public void deletePortRuleWithNullVirtualMachine() throws Exception {
         //represents a new port rule which should be deleted from the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01",22,1540).build();
         
@@ -1309,7 +1311,7 @@ public class VirtualMachineManagerImplTest {
      * appears an informing error message.
      */
     @Test
-    public void deletePortRuleWithNonexistentVM() {
+    public void deletePortRuleWithNonexistentVM() throws Exception {
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
@@ -1330,7 +1332,7 @@ public class VirtualMachineManagerImplTest {
      * is not even started and on a standard error output appears an informing error message.
      */
     @Test
-    public void deleteNullPortRule() {
+    public void deleteNullPortRule() throws Exception {
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         
@@ -1350,7 +1352,7 @@ public class VirtualMachineManagerImplTest {
      * appears an informing error message.
      */
     @Test
-    public void deletePortRuleWithNullName() {
+    public void deletePortRuleWithNullName() throws Exception {
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
@@ -1372,7 +1374,7 @@ public class VirtualMachineManagerImplTest {
      * appears an informing error message.
      */
     @Test
-    public void deletePortRuleWithEmptyName() {
+    public void deletePortRuleWithEmptyName() throws Exception {
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
@@ -1395,7 +1397,7 @@ public class VirtualMachineManagerImplTest {
      * error output appears an error informing message.
      */
     @Test
-    public void deletePortRuleFromDisconnectedPhysicalMachine() {
+    public void deletePortRuleFromDisconnectedPhysicalMachine() throws Exception {
         //represents a virtual machine from which should be deleted a port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a port rule which should be deleted from the virtual machine vm
@@ -1424,7 +1426,7 @@ public class VirtualMachineManagerImplTest {
      * even started and on a standard error output appears an error informing message.
      */
     @Test
-    public void deletePortRuleWithSuddenNetworkConnectionLossOuterCheck() {
+    public void deletePortRuleWithSuddenNetworkConnectionLossOuterCheck() throws Exception {
         //represents a virtual machine from which should be deleted a port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a port rule which should be deleted from the virtual machine vm
@@ -1457,7 +1459,7 @@ public class VirtualMachineManagerImplTest {
      * output appears an error informing message.
      */
     @Test
-    public void deletePortRuleWithSuddenNetworkConnectionLossInnerCheck() {
+    public void deletePortRuleWithSuddenNetworkConnectionLossInnerCheck() throws Exception {
         //represents a virtual machine from which should be deleted a port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a port rule which should be deleted from the virtual machine vm
@@ -1520,7 +1522,7 @@ public class VirtualMachineManagerImplTest {
      * on a standard output appears an informing message about that.
      */
     @Test
-    public void deleteAllPortRulesWithNoRules() {
+    public void deleteAllPortRulesWithNoRules() throws Exception {
         //represents a virtual machine from which all port rules should be deleted
         VirtualMachine vm = new VMBuilder().build();
         
@@ -1548,7 +1550,7 @@ public class VirtualMachineManagerImplTest {
      * error output appears an informing error message.
      */
     @Test
-    public void deleteAllPortRulesWithNullVirtualMachine() {
+    public void deleteAllPortRulesWithNullVirtualMachine() throws Exception {
         
         sut.deleteAllPortRules(null);
         
@@ -1594,7 +1596,7 @@ public class VirtualMachineManagerImplTest {
      * and on a standard error output appears an error informing message.
      */
     @Test
-    public void deleteAllPortRulesWithNonexistentVMGetter() {
+    public void deleteAllPortRulesWithNonexistentVMGetter() throws Exception {
         //represents a virtual machine from which all port rules should be deleted
         VirtualMachine vm = new VMBuilder().build();
                 
@@ -1623,7 +1625,7 @@ public class VirtualMachineManagerImplTest {
      * informing message.
      */
     @Test
-    public void deleteAllPortRulesWithNonexistentVMDeletion(){
+    public void deleteAllPortRulesWithNonexistentVMDeletion() throws Exception {
         //represents a virtual machine from which all port rules should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents the first of two port rules which exist on the virtual machine vm
@@ -1660,7 +1662,7 @@ public class VirtualMachineManagerImplTest {
      * error output appears an error informing message.
      */
     @Test
-    public void deleteAllPortRulesFromDisconnectedPhysicalMachine() {
+    public void deleteAllPortRulesFromDisconnectedPhysicalMachine() throws Exception {
         //represents a virtual machine from which should be all port rules deleted        
         VirtualMachine vm = new VMBuilder().build();
 
@@ -1689,7 +1691,7 @@ public class VirtualMachineManagerImplTest {
      * is not even started and on a standard error output appears an error informing message.
      */
     @Test
-    public void deleteAllPortRulesWithSuddenNetworkConnectionLossOuterCheck() {
+    public void deleteAllPortRulesWithSuddenNetworkConnectionLossOuterCheck() throws Exception {
         //represents a virtual machine from which should be all port rules deleted
         VirtualMachine vm = new VMBuilder().build();
 
@@ -1722,7 +1724,7 @@ public class VirtualMachineManagerImplTest {
      * iself is not even started and on a standard error output appears an error informing message.
      */
     @Test
-    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckGetter() {
+    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckGetter() throws Exception {
         //represents a virtual machine from which should be all port rules deleted
         VirtualMachine vm = new VMBuilder().build();        
 
@@ -1755,7 +1757,7 @@ public class VirtualMachineManagerImplTest {
      * output appears an error informing message.
      */
     @Test
-    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckDeletion() {
+    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckDeletion() throws Exception {
         //represents a virtual machine from which should be all port rules deleted
         VirtualMachine vm = new VMBuilder().build();        
         //represents the first of two port rules which exist on the virtual machine vm

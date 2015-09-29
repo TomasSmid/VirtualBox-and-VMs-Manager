@@ -22,10 +22,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -157,10 +154,12 @@ public class ConnectionManagerImpl implements ConnectionManager{
     
     private void establishConnection(PhysicalMachine physicalMachine) throws ConnectionFailureException,
                                                                              IncompatibleVirtToolAPIVersionException{
+        //number of attempts for connection establishment, max. number of attempts is 3
         int attempt = 1;
         long MAX_WAIT_TIME = 2000l;
         NativeVBoxAPIConnection nativeVBoxAPIConnection = new NativeVBoxAPIConnection();
         
+        //max. 3 attempts to try to connect to the physical machine
         do{
             try {
                 nativeVBoxAPIConnection.connectTo(physicalMachine);
@@ -189,7 +188,7 @@ public class ConnectionManagerImpl implements ConnectionManager{
         
         return "because there occured one of these problems: 1. Network connection "
                 + "is not working properly or at all / 2. The VirtualBox web server "
-                + "is not running / 3. One of key value (IP address, number of web "
+                + "is not running / 3. One of the key value (IP address, number of web "
                 + "server port, username or user password) of the physical machine "
                 + "has been changed and it is incorrect now.";
     }

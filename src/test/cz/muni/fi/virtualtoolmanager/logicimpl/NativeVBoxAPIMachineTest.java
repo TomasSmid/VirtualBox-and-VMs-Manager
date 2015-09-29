@@ -31,9 +31,13 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.powermock.api.mockito.PowerMockito;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.virtualbox_4_3.IConsole;
 import org.virtualbox_4_3.IMachine;
 import org.virtualbox_4_3.INATEngine;
@@ -41,6 +45,7 @@ import org.virtualbox_4_3.INetworkAdapter;
 import org.virtualbox_4_3.IProgress;
 import org.virtualbox_4_3.ISession;
 import org.virtualbox_4_3.IVirtualBox;
+import org.virtualbox_4_3.IVirtualBoxErrorInfo;
 import org.virtualbox_4_3.MachineState;
 import org.virtualbox_4_3.NetworkAttachmentType;
 import org.virtualbox_4_3.SessionState;
@@ -53,62 +58,68 @@ import org.virtualbox_4_3.VirtualBoxManager;
  * 
  * @author Tomáš Šmíd
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({NativeVBoxAPIMachine.class, VirtualBoxManager.class})
 public class NativeVBoxAPIMachineTest {
     
     @Rule
     public ExpectedException exception = ExpectedException.none();
     
     private NativeVBoxAPIMachine sut;
-    private VirtualBoxManager vbmMocked;
-    private IVirtualBox vboxMocked;
-    private IMachine machineMocked;
+    private VirtualBoxManager vbmMock;
+    private IVirtualBox vboxMock;
+    private IMachine vboxMachineMock;
     
     @Before
     public void setUp() {
-        vbmMocked = mock(VirtualBoxManager.class);
-        vboxMocked = mock(IVirtualBox.class);
-        machineMocked = mock(IMachine.class);
-        sut = new NativeVBoxAPIMachine(vbmMocked);        
+        PowerMockito.mockStatic(VirtualBoxManager.class);
+        vbmMock = mock(VirtualBoxManager.class);
+        vboxMock = mock(IVirtualBox.class);
+        vboxMachineMock = mock(IMachine.class);
+        when(VirtualBoxManager.createInstance(null)).thenReturn(vbmMock);
+        sut = new NativeVBoxAPIMachine();        
     }
 
     /**
      * This test tests that the virtual machine start up process is performed
      * without any exception or error occurance when all neccessary conditions
      * are met.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void startVMIdealCase(){
+    public void startVMIdealCase() throws Exception {
        //represents a virtual machine which should be started
        VirtualMachine vm = new VMBuilder().build();
        //represents mock object of type ISession for easier and better test control
-       ISession sessionMocked = mock(ISession.class);
+       ISession sessionMock = mock(ISession.class);
        //represents mock object of type IProgress for easier and better test control
-       IProgress progressMocked = mock(IProgress.class);
+       IProgress progressMock = mock(IProgress.class);
        
        //there should be returned a mock object of type IVirtualBox when the method
        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-       when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+       when(vbmMock.getVBox()).thenReturn(vboxMock);
        //there should be returned a mock object of type IMachine when the method
        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
        //in order to control returned values of its methods
-       when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+       when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
        //there should be returned a positive answer to query for virtual machine accessibility which
        //means that there can be performed some operations with the virtual machine
-       when(machineMocked.getAccessible()).thenReturn(true);
+       when(vboxMachineMock.getAccessible()).thenReturn(true);
        //there should be returned a state "PoweredOff" when the method IMachine::getState() is called
        //for first time (when the machine is checked if it is in a valid state for its start up) and
        //when is called for a second time then is returned state "Running" which signalizes that the virtual
        //machine was successfully started
-       when(machineMocked.getState()).thenReturn(MachineState.PoweredOff, MachineState.Running);
+       when(vboxMachineMock.getState()).thenReturn(MachineState.PoweredOff, MachineState.Running);
        //there should be returned a mock object of type ISession when the method
        //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
-       when(vbmMocked.getSessionObject()).thenReturn(sessionMocked);
+       when(vbmMock.getSessionObject()).thenReturn(sessionMock);
        //there should be returned a mock object of type IProgress when the method
        //IMachine::launchVMProcess() is called in order to control returned values of its methods
-       when(machineMocked.launchVMProcess(sessionMocked, "gui", "")).thenReturn(progressMocked);
+       when(vboxMachineMock.launchVMProcess(sessionMock, "gui", "")).thenReturn(progressMock);
        //returned negative answers say the virtual machine is still starting and the positive answer
        //says the virtual machine start up was finished successfully and virtual machine is running now
-       when(progressMocked.getCompleted()).thenReturn(false, false, true);
+       when(progressMock.getCompleted()).thenReturn(false, false, true);
        
        //there should not appear any exception nor error
        sut.startVM(vm);       
@@ -118,19 +129,21 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that there is thrown the UnknownVirtualMachineException
      * exception when the method NativeVBoxAPIMachine::startVM() is called for
      * a virtual machine which does not exist.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void startNonexistentVM(){
+    public void startNonexistentVM() throws Exception {
         //represents a virtual machine which should be started
        VirtualMachine vm = new VMBuilder().build();
        
        //there should be returned a mock object of type IVirtualBox when the method
        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-       when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+       when(vbmMock.getVBox()).thenReturn(vboxMock);
        //there should be thrown VBoxException exception when the method
        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
        //and means the virtual machine does not exist and cannot be started
-       doThrow(VBoxException.class).when(vboxMocked).findMachine(vm.getId().toString());
+       doThrow(VBoxException.class).when(vboxMock).findMachine(vm.getId().toString());
        
        exception.expect(UnknownVirtualMachineException.class);
        sut.startVM(vm);
@@ -140,22 +153,29 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that there is thrown the UnexpectedVMStateException
      * exception when the method NativeVBoxAPIMachine::startVM() is called for
      * a virtual machine which is not accessible.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void startInaccessibleVM(){
+    public void startInaccessibleVM() throws Exception {
        //represents a virtual machine which should be started
        VirtualMachine vm = new VMBuilder().build();
+       //mock object of type IVirtualBoxErrorInfo for better test control
+       IVirtualBoxErrorInfo vboxErrInfoMock = mock(IVirtualBoxErrorInfo.class);
        
        //there should be returned a mock object of type IVirtualBox when the method
        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-       when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+       when(vbmMock.getVBox()).thenReturn(vboxMock);
        //there should be returned a mock object of type IMachine when the method
        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
        //in order to control returned values of its methods
-       when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+       when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
        //there should be returned a negative answer to query for virtual machine accessibility
        //which means that the virtual machine cannot be started (invalid state)
-       when(machineMocked.getAccessible()).thenReturn(false);
+       when(vboxMachineMock.getAccessible()).thenReturn(false);
+       //there should be returned a mock object of type IVirtualBoxErrorInfo in order to
+       //control returned values of its methods
+       when(vboxMachineMock.getAccessError()).thenReturn(vboxErrInfoMock);
        
        exception.expect(UnexpectedVMStateException.class);
        sut.startVM(vm);
@@ -166,27 +186,29 @@ public class NativeVBoxAPIMachineTest {
      * exception when the method NativeVBoxAPIMachine::startVM() is called for
      * a virtual machine which is not in a valid state for the start up
      * operation (invalid state "Running").
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void startVMWithInvalidStateRunning(){
+    public void startVMWithInvalidStateRunning() throws Exception {
        //represents a virtual machine which should be started
        VirtualMachine vm = new VMBuilder().build();
        
        //there should be returned a mock object of type IVirtualBox when the method
        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-       when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+       when(vbmMock.getVBox()).thenReturn(vboxMock);
        //there should be returned a mock object of type IMachine when the method
        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
        //in order to control returned values of its methods
-       when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+       when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
        //there should be returned a positive answer to query for virtual machine accessibility which
        //means that there can be performed some operations with the virtual machine
-       when(machineMocked.getAccessible()).thenReturn(true);
+       when(vboxMachineMock.getAccessible()).thenReturn(true);
        //there should be returned a state "Running" when the method IMachine::getState() is called
        //(when the machine is checked if it is in a valid state for its start up) which means that
        //the virtual machine is not in a valid state (invalid states for start up operation
        //are "Running" and "Paused")
-       when(machineMocked.getState()).thenReturn(MachineState.Running);
+       when(vboxMachineMock.getState()).thenReturn(MachineState.Running);
        
        exception.expect(UnexpectedVMStateException.class);
        sut.startVM(vm);
@@ -197,27 +219,29 @@ public class NativeVBoxAPIMachineTest {
      * exception when the method NativeVBoxAPIMachine::startVM() is called for
      * a virtual machine which is not in a valid state for the start up
      * operation (invalid state "Paused").
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void startVMWithInvalidStatePaused(){
+    public void startVMWithInvalidStatePaused() throws Exception {
         //represents a virtual machine which should be started
        VirtualMachine vm = new VMBuilder().build();
        
        //there should be returned a mock object of type IVirtualBox when the method
        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-       when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+       when(vbmMock.getVBox()).thenReturn(vboxMock);
        //there should be returned a mock object of type IMachine when the method
        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
        //in order to control returned values of its methods
-       when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+       when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
        //there should be returned a positive answer to query for virtual machine accessibility which
        //means that there can be performed some operations with the virtual machine
-       when(machineMocked.getAccessible()).thenReturn(true);
+       when(vboxMachineMock.getAccessible()).thenReturn(true);
        //there should be returned a state "Paused" when the method IMachine::getState() is called
        //(when the machine is checked if it is in a valid state for its start up) which means that
        //the virtual machine is not in a valid state (invalid states for start up operation
        //are "Running" and "Paused")
-       when(machineMocked.getState()).thenReturn(MachineState.Paused);
+       when(vboxMachineMock.getState()).thenReturn(MachineState.Paused);
        
        exception.expect(UnexpectedVMStateException.class);
        sut.startVM(vm);
@@ -227,9 +251,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that there is thrown the UnexpectedVMStateException
      * exception when the method NativeVBoxAPIMachine::startVM() is called for
      * a virtual machine which is already locked by another process.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void startAlreadyLockedVM(){
+    public void startAlreadyLockedVM() throws Exception {
        //represents a virtual machine which should be started
        VirtualMachine vm = new VMBuilder().build();
        //represents mock object of type ISession for easier and better test control
@@ -237,25 +263,25 @@ public class NativeVBoxAPIMachineTest {
               
        //there should be returned a mock object of type IVirtualBox when the method
        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-       when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+       when(vbmMock.getVBox()).thenReturn(vboxMock);
        //there should be returned a mock object of type IMachine when the method
        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
        //in order to control returned values of its methods
-       when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+       when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
        //there should be returned a positive answer to query for virtual machine accessibility which
        //means that there can be performed some operations with the virtual machine
-       when(machineMocked.getAccessible()).thenReturn(true);
+       when(vboxMachineMock.getAccessible()).thenReturn(true);
        //there should be returned a state "PoweredOff" when the method IMachine::getState() is called
        //(when the machine is checked if it is in a valid state for its start up) which means the
        //virtual machine is in a valid state and can be started
-       when(machineMocked.getState()).thenReturn(MachineState.PoweredOff);
+       when(vboxMachineMock.getState()).thenReturn(MachineState.PoweredOff);
        //there should be returned a mock object of type ISession when the method
        //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
-       when(vbmMocked.getSessionObject()).thenReturn(sessionMocked);
+       when(vbmMock.getSessionObject()).thenReturn(sessionMocked);
        //there should be thrown a VBoxException exception when the method
        //IMachine::launchVMProcess() is called and means that the virtual machine is already
        //locked by another process which is working with the virtual machine now
-       doThrow(VBoxException.class).when(machineMocked).launchVMProcess(sessionMocked, "gui", "");
+       doThrow(VBoxException.class).when(vboxMachineMock).launchVMProcess(sessionMocked, "gui", "");
        
        exception.expect(UnexpectedVMStateException.class);
        sut.startVM(vm);
@@ -265,9 +291,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that there is thrown the ConnectionFailureException
      * exception when there appears any connection problem while the start up
      * operation is beginning.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void startVMWithSuddenNetworkConnectionLoss(){
+    public void startVMWithSuddenNetworkConnectionLoss() throws Exception {
        //represents a virtual machine which should be started
        VirtualMachine vm = new VMBuilder().build();
        String url = "http://" + vm.getHostMachine().getAddressIP() + ":"
@@ -277,7 +305,7 @@ public class NativeVBoxAPIMachineTest {
        
        //there should be thrown a VBoxException exception when the method VirtualBoxManager::connect()
        //is called with a required host machine and means that there occured any connection problem
-       doThrow(VBoxException.class).when(vbmMocked).connect(url, username, userPassword);
+       doThrow(VBoxException.class).when(vbmMock).connect(url, username, userPassword);
        
        exception.expect(ConnectionFailureException.class);
        sut.startVM(vm);
@@ -287,9 +315,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that the virtual machine shut down process is performed
      * without any exception or error occurance when all neccessary conditions
      * are met.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownVMIdealCase(){
+    public void shutDownVMIdealCase() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a mock object of type ISession for easier and better test control
@@ -301,21 +331,21 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a positive answer to query for virtual machine accessibility
         //and means that there can be performed some operations with a virtual machine
-        when(machineMocked.getAccessible()).thenReturn(true);
+        when(vboxMachineMock.getAccessible()).thenReturn(true);
         //there should be returned the state "Running" when the method IMachine::getState()
         //is called for the first time and the state "PoweredOff" when it is called for the
         //second time and it signalizes switching virtual machine state (successful shut down)
-        when(machineMocked.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
+        when(vboxMachineMock.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
         //there should be returned a mock object of type ISession when the method
         //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
-        when(vbmMocked.getSessionObject()).thenReturn(sessionMocked);
+        when(vbmMock.getSessionObject()).thenReturn(sessionMocked);
         //there should be returned a mock object of type IConsole when the method
         //ISession::getConsole() is called in order to control returned values of its methods
         when(sessionMocked.getConsole()).thenReturn(consoleMocked);
@@ -337,9 +367,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that the virtual machine shut down process is performed
      * without any exception or error occurance even the shut down process itself
      * last for a longer time when all neccessary conditions are met.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownVMIdealCaseWithLongShuttingDownProcess(){
+    public void shutDownVMIdealCaseWithLongShuttingDownProcess() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a mock object of type ISession for easier and better test control
@@ -351,22 +383,22 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a positive answer to query for virtual machine accessibility
         //and means that there can be performed some operations with a virtual machine
-        when(machineMocked.getAccessible()).thenReturn(true);
+        when(vboxMachineMock.getAccessible()).thenReturn(true);
         //there should be returned the state "Running" (also can be "Paused" or "Stuck")
         //when the method IMachine::getState() is called for the first time and the state
         //"PoweredOff" when it is called for the second time and it signalizes switching
         //virtual machine state (successful shut down)
-        when(machineMocked.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
+        when(vboxMachineMock.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
         //there should be returned a mock object of type ISession when the method
         //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
-        when(vbmMocked.getSessionObject()).thenReturn(sessionMocked);
+        when(vbmMock.getSessionObject()).thenReturn(sessionMocked);
         //there should be returned a mock object of type IConsole when the method
         //ISession::getConsole() is called in order to control returned values of its methods
         when(sessionMocked.getConsole()).thenReturn(consoleMocked);
@@ -391,9 +423,11 @@ public class NativeVBoxAPIMachineTest {
      * without any exception or error occurance even the shut down process itself
      * last for a longer time (switching virtual machine to the state "PoweredOff")
      * when all neccessary conditions are met.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownVMIdealCaseWithLongVMSwitchingToStatePoweredOff(){
+    public void shutDownVMIdealCaseWithLongVMSwitchingToStatePoweredOff() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a mock object of type ISession for easier and better test control
@@ -405,24 +439,24 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a positive answer to query for virtual machine accessibility
         //and means that there can be performed some operations with a virtual machine
-        when(machineMocked.getAccessible()).thenReturn(true);
+        when(vboxMachineMock.getAccessible()).thenReturn(true);
         //there should be returned the state "Running" when the method IMachine::getState()
         //is called for the first time, then five times the state "Stopping" and finally the state
         //"PoweredOff" which signalizes successful shut down
-        when(machineMocked.getState()).thenReturn(MachineState.Running, MachineState.Stopping,
+        when(vboxMachineMock.getState()).thenReturn(MachineState.Running, MachineState.Stopping,
                                                   MachineState.Stopping,MachineState.Stopping,
                                                   MachineState.Stopping,MachineState.Stopping,
                                                   MachineState.PoweredOff);
         //there should be returned a mock object of type ISession when the method
         //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
-        when(vbmMocked.getSessionObject()).thenReturn(sessionMocked);
+        when(vbmMock.getSessionObject()).thenReturn(sessionMocked);
         //there should be returned a mock object of type IConsole when the method
         //ISession::getConsole() is called in order to control returned values of its methods
         when(sessionMocked.getConsole()).thenReturn(consoleMocked);
@@ -445,9 +479,11 @@ public class NativeVBoxAPIMachineTest {
      * without any exception or error occurance even the shut down process itself
      * last for a longer time (unlocking virtual machine by the shut down process)
      * when all neccessary conditions are met.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownVMIdealCaseWithLongUnlockingVM(){
+    public void shutDownVMIdealCaseWithLongUnlockingVM() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a mock object of type ISession for easier and better test control
@@ -459,21 +495,21 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a positive answer to query for virtual machine accessibility
         //and means that there can be performed some operations with a virtual machine
-        when(machineMocked.getAccessible()).thenReturn(true);
+        when(vboxMachineMock.getAccessible()).thenReturn(true);
         //there should be returned the state "Running" when the method IMachine::getState()
         //is called for the first time and the state "PoweredOff" when it is called for the
         //second time and it signalizes switching virtual machine state (successful shut down)
-        when(machineMocked.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
+        when(vboxMachineMock.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
         //there should be returned a mock object of type ISession when the method
         //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
-        when(vbmMocked.getSessionObject()).thenReturn(sessionMocked);
+        when(vbmMock.getSessionObject()).thenReturn(sessionMocked);
         //there should be returned a mock object of type IConsole when the method
         //ISession::getConsole() is called in order to control returned values of its methods
         when(sessionMocked.getConsole()).thenReturn(consoleMocked);
@@ -498,19 +534,21 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that if the method NativeVBoxAPIMachine::shutDownVM() is
      * called with a virtual machine which does not exist then there is thrown
      * the UnknownVirtualMachineException exception.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownNonexistentVM(){
+    public void shutDownNonexistentVM() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be thrown VBoxException exception when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine and
         //means the virtual machine does not exist
-        doThrow(VBoxException.class).when(vboxMocked).findMachine(vm.getId().toString());
+        doThrow(VBoxException.class).when(vboxMock).findMachine(vm.getId().toString());
         
         exception.expect(UnknownVirtualMachineException.class);
         sut.shutDownVM(vm);
@@ -520,22 +558,29 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that if the method NativeVBoxAPIMachine::shutDownVM() is
      * called with a virtual machine which is not accessible then there is thrown
      * the UnexpectedVMStateException exception.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownInaccessibleVM(){
+    public void shutDownInaccessibleVM() throws Exception{
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
+        //mock object of type IVirtualBoxErrorInfo for better test control
+        IVirtualBoxErrorInfo vboxErrInfoMock = mock(IVirtualBoxErrorInfo.class);
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a negative answer to query for virtual machine accessibility
         //and means that the virtual machine cannot be powered off
-        when(machineMocked.getAccessible()).thenReturn(true);
+        when(vboxMachineMock.getAccessible()).thenReturn(false);
+        //there should be returned a mock object of type IVirtualBoxErrorInfo in order to
+        //control the returned values of its methods
+        when(vboxMachineMock.getAccessError()).thenReturn(vboxErrInfoMock);
         
         exception.expect(UnexpectedVMStateException.class);
         sut.shutDownVM(vm);
@@ -545,27 +590,29 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that if the method NativeVBoxAPIMachine::shutDownVM() is
      * called with a virtual machine which is not in a required (valid) state for
      * shut down operation then there is thrown the UnexpectedVMStateException exception.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownVMWithInvalidState(){
+    public void shutDownVMWithInvalidState() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a positive answer to query for virtual machine accessibility
         //and means that there can be performed some operations with a virtual machine
-        when(machineMocked.getAccessible()).thenReturn(true);
+        when(vboxMachineMock.getAccessible()).thenReturn(true);
         //there should be returned the state "PoweredOff" when the method IMachine::getState()
         //is called for the first time (the virtual machine state check if it is valid), but the only
         //valid states for virtual machine shut down are "Running", "Paused", "Stuck", so the virtual
         //machine cannot be powered off
-        when(machineMocked.getState()).thenReturn(MachineState.PoweredOff);
+        when(vboxMachineMock.getState()).thenReturn(MachineState.PoweredOff);
         
         exception.expect(UnexpectedVMStateException.class);
         sut.shutDownVM(vm);
@@ -575,9 +622,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that there is thrown the ConnectionFailureException
      * exception when there appears any connection problem while the shut down
      * operation is beginning.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void shutDownVMWithSuddenNetworkConnectionLoss(){
+    public void shutDownVMWithSuddenNetworkConnectionLoss() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         String url = "http://" + vm.getHostMachine().getAddressIP() + ":"
@@ -587,7 +636,7 @@ public class NativeVBoxAPIMachineTest {
 
         //there should be thrown a VBoxException exception when the method VirtualBoxManager::connect()
         //is called with a required host machine and means that there occured any connection problem
-        doThrow(VBoxException.class).when(vbmMocked).connect(url, username, userPassword);
+        doThrow(VBoxException.class).when(vbmMock).connect(url, username, userPassword);
 
         exception.expect(ConnectionFailureException.class);
         sut.shutDownVM(vm);
@@ -597,9 +646,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that if there are all conditions neccassery for port rule
      * addition met then there does not appear any exception nor error and new
      * port rule is successfully created at the particular virtual machine.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void addPortRuleIdealCase(){
+    public void addPortRuleIdealCase() throws Exception {
         //represents virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be created at the virtual machine
@@ -611,14 +662,14 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
-        when(machineMocked.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
         //there is returned the attachment type "NAT" which is the only valid value which can be used
         when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.NAT);
         //there should be returned a mock object of type INetworkAdapter when the method
@@ -634,9 +685,11 @@ public class NativeVBoxAPIMachineTest {
      * called with a virtual machine which does not exist then there is returned
      * the UnknownVirtualMachineException exception and the port rule is not added
      * to that virtual machine.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void addPortRuleWithNonexistentVM(){
+    public void addPortRuleWithNonexistentVM() throws Exception {
         //represents virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be created at the virtual machine
@@ -644,10 +697,10 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be thrown a VBoxException exception when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
-        doThrow(VBoxException.class).when(vboxMocked).findMachine(vm.getId().toString());
+        doThrow(VBoxException.class).when(vboxMock).findMachine(vm.getId().toString());
         
         exception.expect(UnknownVirtualMachineException.class);
         sut.addPortRule(vm, portRule);
@@ -658,9 +711,11 @@ public class NativeVBoxAPIMachineTest {
      * called with virtual machine which has not the attachment type NAT then
      * there is thrown UnexpectedVMStateException exception and the port rule is
      * not added.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void addPortRuleWithInvalidAttachmentType(){
+    public void addPortRuleWithInvalidAttachmentType() throws Exception {
         //represents virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be created at the virtual machine
@@ -670,14 +725,14 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
-        when(machineMocked.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
         //there is returned the attachment type "Bridged" which is  not the valid state for port rule addition
         //(the same result would be with states: "Generic", "HostOnly", "Internal", "NATNetwork", "Null")
         when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.Bridged);
@@ -690,9 +745,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that there is thrown the ConnectionFailureException
      * exception when there appears any connection problem while the port rule
      * addition operation is beginning.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void addPortRuleWithSuddenNetworkConnectionLoss(){
+    public void addPortRuleWithSuddenNetworkConnectionLoss() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be created at the virtual machine
@@ -704,7 +761,7 @@ public class NativeVBoxAPIMachineTest {
 
         //there should be thrown a VBoxException exception when the method VirtualBoxManager::connect()
         //is called with a required host machine and means that there occured any connection problem
-        doThrow(VBoxException.class).when(vbmMocked).connect(url, username, userPassword);
+        doThrow(VBoxException.class).when(vbmMock).connect(url, username, userPassword);
 
         exception.expect(ConnectionFailureException.class);
         sut.addPortRule(vm, portRule);
@@ -714,9 +771,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that if there are all neccessary conditions for port rule
      * deletion operation met then the port rule is successfully deleted and no
      * exception nor error appears.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void deletePortRuleIdealCase(){
+    public void deletePortRuleIdealCase() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a name of the port rule which should be deleted
@@ -728,14 +787,16 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
-        when(machineMocked.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        //there is returned the attachment type "NAT" which is the valid state for port rule deletion
+        when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.NAT);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
         when(adapterMocked.getNATEngine()).thenReturn(natEngineMocked);
@@ -748,9 +809,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that if the method NativeVBoxAPIMachine::deletePortRule()
      * is called with a virtual machine which does not exist then the port rule
      * is not deleted and there is thrown UnknownVirtualMachineException exception.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void deletePortRuleWithNonexistentVM(){
+    public void deletePortRuleWithNonexistentVM() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a name of the port rule which should be deleted
@@ -758,10 +821,10 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned thrown a VBoxException exception when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
-        doThrow(VBoxException.class).when(vboxMocked).findMachine(vm.getId().toString());
+        doThrow(VBoxException.class).when(vboxMock).findMachine(vm.getId().toString());
         
         exception.expect(UnknownVirtualMachineException.class);
         sut.deletePortRule(vm, portRuleName);
@@ -771,9 +834,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that if the method NativeVBoxAPIMachine::deletePortRule()
      * is called with a port rule name which does not exist then the port rule
      * is not deleted and there is thrown UnknownPortRuleException exception.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void deleteNonexistentPortRule(){
+    public void deleteNonexistentPortRule() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a name of the port rule which should be deleted
@@ -785,14 +850,16 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
-        when(machineMocked.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        //there is returned the attachment type "NAT" which is the valid state for port rule deletion
+        when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.NAT);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
         when(adapterMocked.getNATEngine()).thenReturn(natEngineMocked);
@@ -805,12 +872,49 @@ public class NativeVBoxAPIMachineTest {
     }
     
     /**
+     * This test tests that if the method NativeVBoxAPIMachine::deletePortRule() is
+     * called with virtual machine which has not the attachment type NAT then
+     * there is thrown UnexpectedVMStateException exception and the port rule is
+     * not deleted.
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void deletePortRuleWithInvalidAttachmentType() throws Exception {
+        //represents virtual machine to which a new port rule should be added
+        VirtualMachine vm = new VMBuilder().build();
+        //represents a name of the port rule which should be deleted
+        String portRuleName = "PortRule_01";
+        //represents a mock object of type INetworkAdapter for easier and better test control
+        INetworkAdapter adapterMocked = mock(INetworkAdapter.class);
+        
+        //there should be returned a mock object of type IVirtualBox when the method
+        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
+        //there should be returned a mock object of type IMachine when the method
+        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
+        //in order to control returned values of its methods
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
+        //there should be returned a mock object of type INetworkAdapter when the method
+        //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        //there is returned the attachment type "Bridged" which is  not the valid state for port rule addition
+        //(the same result would be with states: "Generic", "HostOnly", "Internal", "NATNetwork", "Null")
+        when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.Bridged);
+        
+        exception.expect(UnexpectedVMStateException.class);
+        sut.deletePortRule(vm, portRuleName);
+    }
+    
+    /**
      * This test tests that there is thrown the ConnectionFailureException
      * exception when there appears any connection problem while the port rule
      * deletion operation is beginning.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void deletePortRuleWithSuddenNetworkConnectionLoss(){
+    public void deletePortRuleWithSuddenNetworkConnectionLoss() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a name of the port rule which should be deleted
@@ -822,7 +926,7 @@ public class NativeVBoxAPIMachineTest {
 
         //there should be thrown a VBoxException exception when the method VirtualBoxManager::connect()
         //is called with a required host machine and means that there occured any connection problem
-        doThrow(VBoxException.class).when(vbmMocked).connect(url, username, userPassword);
+        doThrow(VBoxException.class).when(vbmMock).connect(url, username, userPassword);
 
         exception.expect(ConnectionFailureException.class);
         sut.deletePortRule(vm, portRuleName);
@@ -831,9 +935,11 @@ public class NativeVBoxAPIMachineTest {
     /**
      * This test tests that there is returned a non-empty list of port rules
      * when there exist some port rules on the virtual machine which is valid.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void getPortRulesWithReturnedNonemptyList(){
+    public void getPortRulesWithReturnedNonemptyList() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents the first of two port rules from the virtual machine vm
@@ -849,14 +955,16 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
-        when(machineMocked.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        //there is returned the attachment type "NAT" which is the valid state for port rule deletion
+        when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.NAT);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
         when(adapterMocked.getNATEngine()).thenReturn(natEngineMocked);
@@ -874,9 +982,11 @@ public class NativeVBoxAPIMachineTest {
     /**
      * This test tests that there is returned an empty list of port rules
      * when there does not exist any port rule on the virtual machine.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void getPortRulesWithReturnedEmptyList(){
+    public void getPortRulesWithReturnedEmptyList() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a mock object of type INetworkAdapter for easier and better test control
@@ -886,14 +996,16 @@ public class NativeVBoxAPIMachineTest {
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be returned a mock object of type IMachine when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
         //in order to control returned values of its methods
-        when(vboxMocked.findMachine(vm.getId().toString())).thenReturn(machineMocked);
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
-        when(machineMocked.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        //there is returned the attachment type "NAT" which is the valid state for port rule deletion
+        when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.NAT);
         //there should be returned a mock object of type INetworkAdapter when the method
         //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
         when(adapterMocked.getNATEngine()).thenReturn(natEngineMocked);
@@ -903,27 +1015,62 @@ public class NativeVBoxAPIMachineTest {
         //there should not be any exception nor error
         List<String> actList = sut.getPortRules(vm);
         
-        assertFalse("The returned list of port rules should be empty", actList.isEmpty());
+        assertTrue("The returned list of port rules should be empty", actList.isEmpty());
     }
     
     /**
      * This test tests that if the method NativeVBoxAPIMachine::getPortRules()
      * is called with a virtual machine which does not exist then there should
      * be thrown the UnknownVirtualMachineException exception.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void getPortRulesWithNonexistentVM(){
+    public void getPortRulesWithNonexistentVM() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
-        when(vbmMocked.getVBox()).thenReturn(vboxMocked);
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
         //there should be thrown a VBoxException exception when the method
         //IVirtualBox::findMachine() is called with an ID of a required virtual machine
-        doThrow(VBoxException.class).when(vboxMocked).findMachine(vm.getId().toString());
+        doThrow(VBoxException.class).when(vboxMock).findMachine(vm.getId().toString());
         
         exception.expect(UnknownVirtualMachineException.class);
+        sut.getPortRules(vm);
+    }
+    
+    /**
+     * This test tests that if the method NativeVBoxAPIMachine::getPortRules() is
+     * called with virtual machine which has not the attachment type NAT then
+     * there is thrown UnexpectedVMStateException exception and the port rules are
+     * not retrieved.
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void getPortRulesWithInvalidAttachmentType() throws Exception {
+        //represents virtual machine to which a new port rule should be added
+        VirtualMachine vm = new VMBuilder().build();
+        //represents a mock object of type INetworkAdapter for easier and better test control
+        INetworkAdapter adapterMocked = mock(INetworkAdapter.class);
+        
+        //there should be returned a mock object of type IVirtualBox when the method
+        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
+        //there should be returned a mock object of type IMachine when the method
+        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
+        //in order to control returned values of its methods
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
+        //there should be returned a mock object of type INetworkAdapter when the method
+        //IMachine::getNetworkAdapter() is called in order to control returned values of its methods
+        when(vboxMachineMock.getNetworkAdapter(0L)).thenReturn(adapterMocked);
+        //there is returned the attachment type "Bridged" which is  not the valid state for port rule addition
+        //(the same result would be with states: "Generic", "HostOnly", "Internal", "NATNetwork", "Null")
+        when(adapterMocked.getAttachmentType()).thenReturn(NetworkAttachmentType.Bridged);
+        
+        exception.expect(UnexpectedVMStateException.class);
         sut.getPortRules(vm);
     }
     
@@ -931,9 +1078,11 @@ public class NativeVBoxAPIMachineTest {
      * This test tests that there is thrown the ConnectionFailureException
      * exception when there appears any connection problem while retrive
      * operation is beginning.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void getPortRulesWithSuddenNetowrkConnectionLoss(){
+    public void getPortRulesWithSuddenNetowrkConnectionLoss() throws Exception {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a name of the port rule which should be deleted
@@ -945,7 +1094,7 @@ public class NativeVBoxAPIMachineTest {
 
         //there should be thrown a VBoxException exception when the method VirtualBoxManager::connect()
         //is called with a required host machine and means that there occured any connection problem
-        doThrow(VBoxException.class).when(vbmMocked).connect(url, username, userPassword);
+        doThrow(VBoxException.class).when(vbmMock).connect(url, username, userPassword);
 
         exception.expect(ConnectionFailureException.class);
         sut.getPortRules(vm);
