@@ -101,13 +101,12 @@ class NativeVBoxAPIMachine {
                 //just loop until that is true
             }
         }catch(VBoxException ex){
-            //VM cannot be started now, because there is another process which is using the VM now
-            //(that process locked the VM for itself)
-            throw new UnexpectedVMStateException(getErrorMessage(4, virtualMachine));
-        }finally{
             //just do the clean up after performed operation(s)
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
+            //VM cannot be started now, because there is another process which is using the VM now
+            //(that process locked the VM for itself)
+            throw new UnexpectedVMStateException(getErrorMessage(4, virtualMachine));
         }
         
         //operation finished successfully (VM is running now), now release the VM for another processes

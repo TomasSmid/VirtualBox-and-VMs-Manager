@@ -67,6 +67,9 @@ class NativeVBoxAPIConnection {
                 virtualBoxManager.connect(url, physicalMachine.getUsername(),
                                           physicalMachine.getUserPassword());
             }catch (VBoxException ex){//there occured any problem while connecting to the physical machine, more info at head of the method connectTo()
+                //ends the connection (if successful) with the physical machine and cleans up after itself
+                virtualBoxManager.disconnect();
+                virtualBoxManager.cleanup();
                 throw new ConnectionFailureException("Connection operation failure: "
                         + "Unable to establish a connection with a physical machine "
                         + physicalMachine + ". Most probably there occured one of "
@@ -76,10 +79,6 @@ class NativeVBoxAPIConnection {
                         + "username or user password) wrong / 3. There is not running "
                         + "a VirtualBox web server on physical machine " 
                         + physicalMachine + ".");
-            }finally{
-                //ends the connection (if successful) with the physical machine and cleans up after itself
-                virtualBoxManager.disconnect();
-                virtualBoxManager.cleanup();
             }
             
             IVirtualBox vbox = virtualBoxManager.getVBox();

@@ -17,8 +17,29 @@ package cz.muni.fi.virtualtoolmanager.logicimpl;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.CloneType;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import org.virtualbox_4_3.CleanupMode;
+import org.virtualbox_4_3.CloneMode;
+import org.virtualbox_4_3.CloneOptions;
+import org.virtualbox_4_3.IConsole;
+import org.virtualbox_4_3.IGuestOSType;
+import org.virtualbox_4_3.IMachine;
+import org.virtualbox_4_3.IMedium;
+import org.virtualbox_4_3.IProgress;
+import org.virtualbox_4_3.ISession;
+import org.virtualbox_4_3.ISnapshot;
+import org.virtualbox_4_3.ISystemProperties;
+import org.virtualbox_4_3.IVirtualBox;
+import org.virtualbox_4_3.LockType;
+import org.virtualbox_4_3.MachineState;
+import org.virtualbox_4_3.SessionState;
+import org.virtualbox_4_3.VBoxException;
 import org.virtualbox_4_3.VirtualBoxManager;
 
 
@@ -29,92 +50,314 @@ import org.virtualbox_4_3.VirtualBoxManager;
  */
 class NativeVBoxAPIManager {
     
-    private VirtualBoxManager virtualBoxManager;
-    
-    public NativeVBoxAPIManager(){
-        this(VirtualBoxManager.createInstance(null));
-    }
-    
-    NativeVBoxAPIManager(VirtualBoxManager virtualBoxManager){
-        this.virtualBoxManager = virtualBoxManager;
-    }
-    
-    
-    public boolean registerVirtualMachine(PhysicalMachine physicalMachine, String name) {
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    public VirtualMachine getVirtualMachine(PhysicalMachine physicalMachine, String nameOrId) {
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    public List<VirtualMachine> getAllVirtualMachines(PhysicalMachine physicalMachine) {
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    public void removeVirtualMachine(VirtualMachine virtualMachine) {
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    public VirtualMachine createVMClone(VirtualMachine virtualMachine, CloneType cloneType) {
-        throw new UnsupportedOperationException("Unsupported operation");
-    }
-    
-    /*private void checkPMIsNotNull(PhysicalMachine pm, String errMsg){
-        if(pm == null){
-            throw new IllegalArgumentException(errMsg);
-        }
-    }
-    
-    private void checkVMIsNotNull(VirtualMachine vm, String errMsg){
-        if(vm == null){
-            throw new IllegalArgumentException(errMsg);
-        }
-    }
-    
-    private void checkVMIdIsNotNullNorEmpty(UUID id, String errMsg){
-        if(id == null || id.toString().isEmpty()){
-            throw new IllegalArgumentException(errMsg);
-        }
-    }
-    
-    private void checkVMNameIsNotNullNorEmpty(String name, String errMsg){
-        if(name == null || name.isEmpty()){
-            throw new IllegalArgumentException(errMsg);
-        }
-    }
-    
-    private void checkPMIsConnected(PhysicalMachine pm, String errMsg) throws UnexpectedVMStateException{
-        NativeVBoxAPIConnection natapiCon = NativeVBoxAPIConnection.getInstance();
+    /**
+     * 
+     * 
+     * @param physicalMachine
+     * @param name
+     * @return
+     * @throws ConnectionFailureException
+     * @throws UnknownVirtualMachineException 
+     */
+    public boolean registerVirtualMachine(PhysicalMachine physicalMachine, String name) throws ConnectionFailureException,
+                                                                                               UnknownVirtualMachineException {
+        String url = "http://" + physicalMachine.getAddressIP() + ":" + physicalMachine.getPortOfVTWebServer();
+        boolean vmIsRegistered = true;
+        VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         
-        if(!natapiCon.isConnected(pm)){
-            throw new UnexpectedVMStateException(errMsg);
+        try{
+            virtualBoxManager.connect(url, physicalMachine.getUsername(), physicalMachine.getUserPassword());
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new ConnectionFailureException(getErrorMessage(0, physicalMachine, name));
         }
+        
+        IVirtualBox vbox = virtualBoxManager.getVBox();        
+        IMachine vboxMachine = null;
+        try{
+            vboxMachine = vbox.findMachine(name);
+        }catch(VBoxException ex){
+            vmIsRegistered = false;
+        }
+        
+        if(!vmIsRegistered){
+            ISystemProperties systemProperties = vbox.getSystemProperties();
+            try{
+                vboxMachine = vbox.openMachine(systemProperties.getDefaultMachineFolder() + "\\" + name + "\\" + name + ".vbox");
+            }catch(VBoxException ex){
+                virtualBoxManager.disconnect();
+                virtualBoxManager.cleanup();
+                throw new UnknownVirtualMachineException(getErrorMessage(1, physicalMachine, name));
+            }
+            
+            vbox.registerMachine(vboxMachine);
+            
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            return true;
+        }
+        
+        virtualBoxManager.disconnect();
+        virtualBoxManager.cleanup();
+        return false;
     }
     
-    private void checkCloneTypeIsNotNull(CloneType cloneType, String errMsg){
-        if(cloneType == null){
-            throw new IllegalArgumentException(errMsg);
+    /**
+     * 
+     * 
+     * @param physicalMachine
+     * @param nameOrId
+     * @return
+     * @throws ConnectionFailureException
+     * @throws UnknownVirtualMachineException 
+     */
+    public VirtualMachine getVirtualMachine(PhysicalMachine physicalMachine, String nameOrId) throws ConnectionFailureException,
+                                                                                                     UnknownVirtualMachineException {
+        String url = "http://" + physicalMachine.getAddressIP() + ":" + physicalMachine.getPortOfVTWebServer();
+        VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
+        
+        try{
+            virtualBoxManager.connect(url, physicalMachine.getUsername(), physicalMachine.getUserPassword());
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new ConnectionFailureException(getErrorMessage(2, physicalMachine, nameOrId));
         }
+        
+        IVirtualBox vbox = virtualBoxManager.getVBox();        
+        IMachine vboxMachine = null;
+        try{
+            vboxMachine = vbox.findMachine(nameOrId);
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new UnknownVirtualMachineException(getErrorMessage(3, physicalMachine, nameOrId));
+        }
+        
+        IGuestOSType guestOSType = vbox.getGuestOSType(vboxMachine.getOSTypeId());
+        VirtualMachine virtualMachine = getConvertedVM(vboxMachine, guestOSType, physicalMachine);
+        
+        virtualBoxManager.disconnect();
+        virtualBoxManager.cleanup();
+        return virtualMachine;
     }
     
-    private void checkVMStateForCloning(MachineState state, String errMsg) throws UnexpectedVMStateException{
-        switch(state){
+    public List<VirtualMachine> getAllVirtualMachines(PhysicalMachine physicalMachine) throws ConnectionFailureException,
+                                                                                              UnknownVirtualMachineException {
+        String url = "http://" + physicalMachine.getAddressIP() + ":" + physicalMachine.getPortOfVTWebServer();
+        VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
+        
+        try{
+            virtualBoxManager.connect(url, physicalMachine.getUsername(), physicalMachine.getUserPassword());
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new ConnectionFailureException(getErrorMessage(4, physicalMachine, ""));
+        }
+        
+        IVirtualBox vbox = virtualBoxManager.getVBox();        
+        List<IMachine> vboxMachines = null;
+        try{
+            vboxMachines = vbox.getMachines();
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new UnknownVirtualMachineException(getErrorMessage(5, physicalMachine, "") + ex.getMessage());
+        }
+        
+        if(vboxMachines.isEmpty()){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            return new ArrayList<>();
+        }        
+        
+        List<VirtualMachine> virtualMachines = new ArrayList<>();
+        for(IMachine vboxMachine : vboxMachines){
+            IGuestOSType guestOSType = vbox.getGuestOSType(vboxMachine.getOSTypeId());
+            virtualMachines.add(getConvertedVM(vboxMachine, guestOSType, physicalMachine));
+        }
+        
+        virtualBoxManager.disconnect();
+        virtualBoxManager.cleanup();
+        return virtualMachines;
+    }
+    
+    public void removeVirtualMachine(VirtualMachine virtualMachine) throws ConnectionFailureException,
+                                                                           UnknownVirtualMachineException,
+                                                                           UnexpectedVMStateException {
+        String url = "http://" + virtualMachine.getHostMachine().getAddressIP() + ":" 
+                + virtualMachine.getHostMachine().getPortOfVTWebServer();
+        String username = virtualMachine.getHostMachine().getUsername();
+        String userPassword = virtualMachine.getHostMachine().getUserPassword();
+        VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
+        
+        try{
+            virtualBoxManager.connect(url, username, userPassword);
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new ConnectionFailureException(getErrorMessage(6, virtualMachine.getHostMachine(),
+                                                 virtualMachine.getName()));
+        }
+        
+        IVirtualBox vbox = virtualBoxManager.getVBox();        
+        IMachine vboxMachine = null;
+        try{
+            vboxMachine = vbox.findMachine(virtualMachine.getId().toString());
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new UnknownVirtualMachineException(getErrorMessage(7, virtualMachine.getHostMachine(),
+                                                     virtualMachine.getName()));
+        }
+        
+        if(!vboxMachine.getAccessible()){
+            try{
+                vboxMachine.unregister(CleanupMode.DetachAllReturnHardDisksOnly);
+            }catch(VBoxException ex){
+                /*machine was not registered -> this should not normally happen, because if the machine
+                was not registered, then the VBoxException would be invoked earlier at vbox.findMachine()*/
+                throw new IllegalStateException(ex);
+            }
+        }else{
+            if(vboxMachine.getState() != MachineState.PoweredOff){
+                throw new UnexpectedVMStateException(getErrorMessage(8, virtualMachine.getHostMachine(),
+                                                     virtualMachine.getName()));
+            }
+
+            if(isLinkedClone(vboxMachine, vbox)){
+                ISession session = virtualBoxManager.getSessionObject();
+                removeVMAsSnapshot(vboxMachine, vbox, session);
+            }else{
+                removeVMAsStandaloneUnit(vboxMachine, vbox);
+            }
+        }
+        
+        virtualBoxManager.disconnect();
+        virtualBoxManager.cleanup();
+    }
+    
+    public VirtualMachine createVMClone(VirtualMachine virtualMachine, CloneType cloneType) throws ConnectionFailureException,
+                                                                                                   UnknownVirtualMachineException,
+                                                                                                   UnexpectedVMStateException {
+        String url = "http://" + virtualMachine.getHostMachine().getAddressIP() + ":" 
+                + virtualMachine.getHostMachine().getPortOfVTWebServer();
+        String username = virtualMachine.getHostMachine().getUsername();
+        String userPassword = virtualMachine.getHostMachine().getUserPassword();
+        VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
+        
+        try{
+            virtualBoxManager.connect(url, username, userPassword);
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new ConnectionFailureException(getErrorMessage(9, virtualMachine.getHostMachine(),
+                                                 virtualMachine.getName()));
+        }
+        
+        IVirtualBox vbox = virtualBoxManager.getVBox();        
+        IMachine vboxMachine = null;
+        try{
+            vboxMachine = vbox.findMachine(virtualMachine.getId().toString());
+        }catch(VBoxException ex){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new UnknownVirtualMachineException(getErrorMessage(10, virtualMachine.getHostMachine(),
+                                                     virtualMachine.getName()));
+        }
+        
+        if(!vboxMachine.getAccessible()){
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new UnexpectedVMStateException(getErrorMessage(11, virtualMachine.getHostMachine(),
+                                                 virtualMachine.getName()) + vboxMachine.getAccessError().getText());
+        }
+        
+        switch(vboxMachine.getState()){
             case PoweredOff:
             case Saved     :
             case Running   :
             case Paused    : break;
-            default        : throw new UnexpectedVMStateException(errMsg);
+            default        : throw new UnexpectedVMStateException(getErrorMessage(12, virtualMachine.getHostMachine(),
+                                                                  virtualMachine.getName()));
         }
+        
+        String cloneName = getNewCloneName(vboxMachine.getName(), vbox, cloneType);
+        
+        IMachine clonableVBoxMachine;
+        if(cloneType == CloneType.LINKED){
+            ISession session = virtualBoxManager.getSessionObject();
+            try{
+                takeSnapshot(vboxMachine,session,cloneName);
+            }catch(VBoxException ex){
+                if(session.getState() == SessionState.Locked){
+                    session.unlockMachine();
+                    while(session.getState() != SessionState.Unlocked){
+                        //do nothing, just loop until the condition is true
+                    }
+                }
+                virtualBoxManager.disconnect();
+                virtualBoxManager.cleanup();
+                throw new UnexpectedVMStateException("Cloning virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " failure: " + ex.getMessage());
+            }        
+            ISnapshot snapshot = vboxMachine.getCurrentSnapshot();
+            clonableVBoxMachine = snapshot.getMachine();
+            
+        }else{
+            clonableVBoxMachine = vbox.findMachine(vboxMachine.getId());
+        }
+        
+        IMachine vboxMachineClone = vbox.createMachine(null, cloneName, null, clonableVBoxMachine.getOSTypeId(), null);
+        List<CloneOptions> cloneOptions = getCloneOptions(cloneType);
+        CloneMode cloneMode = getCloneMode(cloneType);
+        
+        IProgress progress = clonableVBoxMachine.cloneTo(vboxMachineClone, cloneMode, cloneOptions);        
+        Long progressPercent = 0L;
+        OutputHandler outputHandler = new OutputHandler();
+        while(!progress.getCompleted()){
+            if(progress.getPercent() > progressPercent){
+                progressPercent = progress.getPercent();
+                outputHandler.printMessage("Cloning progress > " + progressPercent + "%");
+            }
+        }
+        vboxMachineClone.saveSettings();        
+        vbox.registerMachine(vboxMachineClone);
+        
+        IGuestOSType guestOSType = vbox.getGuestOSType(vboxMachineClone.getOSTypeId());
+        VirtualMachine vmClone = getConvertedVM(vboxMachineClone, guestOSType, virtualMachine.getHostMachine());
+        
+        virtualBoxManager.disconnect();
+        virtualBoxManager.cleanup();
+        
+        return vmClone;
     }
     
-    private void checkVMStateForRemoving(MachineState state, String errMsg) throws UnexpectedVMStateException{
-        if(state != MachineState.PoweredOff){
-            throw new UnexpectedVMStateException(errMsg);
-        }
+    private String getErrorMessage(int index, PhysicalMachine physicalMachine, String vmNameOrId){
+        String[] errMessages = /* 00 */{"Connection operation failure while trying to register virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                                        + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
+                               /* 01 */ "Virtual machine registration operation failure: There is no virtual machine folder named \"" + vmNameOrId + "\" with configuration file \"" + vmNameOrId + ".vbox\" in VirtualBox default machine folder \"VirtualBox VMs\".",
+                               /* 02 */ "Connection operation failure while trying to retrieve virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                                        + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
+                               /* 03 */ "Virtual machine retrieve operation failure: There was made an attempt to retrieve nonexistent virtual machine " + vmNameOrId + " from physical machine " + physicalMachine + ".",
+                               /* 04 */ "Connection operation failure while trying to retrieve all virtual machines: Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                                        + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
+                               /* 05 */ "All virtual machines retrieve operation failure: There did not manage to retrieve virtual machines from physical machine " + physicalMachine + " -> ",
+                               /* 06 */ "Connection operation failure while trying to remove virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                                        + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
+                               /* 07 */ "Virtual machine removal operation failure: There is no virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + ". Nonexistent virtual machine cannot be removed.",
+                               /* 08 */ "Virtual machine removal operation failure: Virtual machine " + vmNameOrId + " from physical machine " + physicalMachine + " cannot be removed, because it is not powered off.",
+                               /* 09 */ "Connection operation failure while trying to clone virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                                        + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
+                               /* 10 */ "Virtual machine cloning operation failure: There is no virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + ". Nonexistent virtual machine cannot be cloned.",
+                               /* 11 */ "Virtual machine cloning operation failure: Virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + " cannot be cloned, because it is not accessible -> ",
+                               /* 12 */ "Virtual machine cloning operation failure: Virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + " cannot be cloned, because it is not in a valid state for cloning. The required states are: \"PoweredOff\", \"Saved\", \"Running\", \"Paused\"."};
+        
+        return errMessages[index];
     }
     
-    private VirtualMachine createVirtualMachine(IMachine vboxMachine, IGuestOSType gost, PhysicalMachine pm){
+    private VirtualMachine getConvertedVM(IMachine vboxMachine, IGuestOSType guestOSType,
+                                          PhysicalMachine physicalMachine){
         IMedium medium = vboxMachine.getMedium("SATA", 0, 0);
         UUID id = UUID.fromString(vboxMachine.getId());
         String name = vboxMachine.getName();
@@ -125,10 +368,10 @@ class NativeVBoxAPIManager {
         Long hardDiskTotalSize = medium.getLogicalSize();
         Long ram = vboxMachine.getMemorySize();
         Long vram = vboxMachine.getVRAMSize();
-        String typeOfOS = gost.getFamilyId();
-        String identifierOfOS = gost.getId();
+        String typeOfOS = guestOSType.getFamilyId();
+        String identifierOfOS = guestOSType.getId();
         
-        VirtualMachine vm = new VirtualMachine.Builder(id, name, pm)
+        return new VirtualMachine.Builder(id, name, physicalMachine)
                                               .countOfCPU(cpuCount)
                                               .countOfMonitors(monitorCount)
                                               .cpuExecutionCap(cpuExecCap)
@@ -139,33 +382,6 @@ class NativeVBoxAPIManager {
                                               .typeOfOS(typeOfOS)
                                               .identifierOfOS(identifierOfOS)
                                               .build();
-        return vm;
-    }
-    
-    private VirtualMachine getVM(PhysicalMachine pm, String key, String[] errMsgs) throws InterruptedException,
-             ConnectionFailureException, IncompatibleVirtToolAPIVersionException, UnknownVirtualMachineException{
-        
-        NativeVBoxAPIConnection natapiCon = NativeVBoxAPIConnection.getInstance();
-        
-        VirtualBoxManager vbm = natapiCon.getVirtualBoxManager(pm, errMsgs[0]);
-        IVirtualBox vbox = vbm.getVBox();
-        IMachine vboxMachine = null;
-        IGuestOSType gost = null;
-        
-        try{
-            vboxMachine = vbox.findMachine(key);
-            gost = vbox.getGuestOSType(vboxMachine.getOSTypeId());
-        }catch(VBoxException ex){
-            vbm.disconnect();
-            vbm.cleanup();
-            throw new UnknownVirtualMachineException(errMsgs[1]);
-        }
-        
-        VirtualMachine vm = createVirtualMachine(vboxMachine,gost,pm);
-        vbm.disconnect();
-        vbm.cleanup();
-        
-        return vm;
     }
     
     private boolean isLinkedClone(IMachine vboxMachine, IVirtualBox vbox){
@@ -220,6 +436,9 @@ class NativeVBoxAPIManager {
         while(medium.getParent().getMachineIds().get(0).equals(vboxMachine.getId())){
             IMedium m = medium.getParent();
             medium = m;
+            if(medium.getParent() == null){
+                break;
+            }
         }
         
         removeLinkedCloneChildren(medium,vbox);
@@ -229,10 +448,14 @@ class NativeVBoxAPIManager {
     private void deleteSnapshot(IMedium parentMedium, IVirtualBox vbox, String machineName, ISession session){
         IMachine parentMachine = vbox.findMachine(parentMedium.getMachineIds().get(0));
         ISnapshot snapshot = parentMachine.findSnapshot(null);
+        long snapshotCount = parentMachine.getSnapshotCount(); 
         
-        for(long i = 0; i < parentMachine.getSnapshotCount(); ++i){            
+        for(long i = 0; i < snapshotCount; ++i){            
             ISnapshot tmp;
-            if(!snapshot.getChildren().isEmpty()){
+            if(snapshot == null){
+                break;
+            }
+            if(!snapshot.getChildren().isEmpty()){//pridat prvne kontrolu na snapshot == null
                 tmp = snapshot.getChildren().get(0);
             }else{
                 tmp = null;
@@ -243,9 +466,13 @@ class NativeVBoxAPIManager {
                 IConsole console = session.getConsole();
                 IProgress p = console.deleteSnapshot(snapshot.getId());
                 while(!p.getCompleted()){
-                    //do nothing, just loop while condition is true
+                    //do nothing, just loop until condition is true
                 }
                 session.unlockMachine();
+                while(session.getState() != SessionState.Unlocked){
+                    //do nothing, just loop until the condition is true
+                }
+                //mozna sem pridat break
             }
             
             snapshot = tmp;
@@ -266,13 +493,22 @@ class NativeVBoxAPIManager {
         int count = 1;
         String cloneName = origName + sufix + count;
         
-        for(;;){
+        /*for(;;){
             try{
                 vbox.findMachine(cloneName);
                 break;
             }catch(VBoxException ex){
                 ++count;
                 cloneName = origName + sufix + count;
+            }
+        }*/
+        for(;;){
+            try{
+                vbox.findMachine(cloneName);
+                ++count;
+                cloneName = origName + sufix + count;
+            }catch(VBoxException ex){
+                break;
             }
         }
         
@@ -282,22 +518,26 @@ class NativeVBoxAPIManager {
     
     private void takeSnapshot(IMachine vboxMachine, ISession session, String cloneName){
         vboxMachine.lockMachine(session, LockType.Shared);
-        IConsole c = session.getConsole();
-        IProgress p = c.takeSnapshot("Linked Base For " + vboxMachine.getName() + " and " + cloneName, null);
-        while(!p.getCompleted()){
+        IConsole console = session.getConsole();
+        IProgress progress = console.takeSnapshot("Linked Base For " + vboxMachine.getName() 
+                                                + " and " + cloneName, null);
+        while(!progress.getCompleted()){
             //do nothing, just loop until snapshot is created
         }
         session.unlockMachine();
+        while(session.getState() != SessionState.Unlocked){
+            //do nothing, just loop until the condition is true
+        }
     }
     
     private List<CloneOptions> getCloneOptions(CloneType cloneType){
-        List<CloneOptions> clops = new ArrayList<>();
+        List<CloneOptions> cloneOptions = new ArrayList<>();
         
         if(cloneType == CloneType.LINKED){
-            clops.add(CloneOptions.Link);
+            cloneOptions.add(CloneOptions.Link);
         }
         
-        return clops;
+        return cloneOptions;
     }
     
     private CloneMode getCloneMode(CloneType cloneType){
@@ -308,5 +548,5 @@ class NativeVBoxAPIManager {
             case LINKED                             : return CloneMode.MachineState;
             default                                 : return CloneMode.MachineState;
         }
-    }*/
+    }
 }

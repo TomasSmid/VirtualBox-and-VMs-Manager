@@ -78,7 +78,7 @@ public class VirtualizationToolManagerImplTest {
      * standard output, but standard error output should stay empty, because no
      * exception nor error should appear.
      */
-    @Test
+    /*@Test
     public void registerVirtualMachineIdealCase() {
         //represents name of a virtual machine which should be newly registered
         String vmName = "VirtualMachine_01";
@@ -103,7 +103,7 @@ public class VirtualizationToolManagerImplTest {
      * This test tests that there cannot be registered a virtual machine with a
      * null name.
      */
-    @Test
+    /*@Test
     public void registerVirtualMachineWithNullName() {
         //there should be returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with required physical machine which means that the physical machine is connected and can be worked with it
@@ -123,7 +123,7 @@ public class VirtualizationToolManagerImplTest {
      * This test tests that there cannot be registered a virtual machine with an
      * empty name.
      */
-    @Test
+    /*@Test
     public void registerVirtualMachineWithEmptyName() {
         //there should be returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with required physical machine which means that the physical machine is connected and can be worked with it
@@ -143,7 +143,7 @@ public class VirtualizationToolManagerImplTest {
      * This test tests that there cannot be registered any virtual machine on a
      * physical machine which is not connected.
      */
-    @Test
+    /*@Test
     public void registerVirtualMachineOnDisconnectedPhysicalMachine() {
         //represents name of a virtual machine which should be newly registered
         String vmName = "VirtualMachine_01";
@@ -169,7 +169,7 @@ public class VirtualizationToolManagerImplTest {
      * there appears any connection problem when there is being performed a
      * physical machine connection check (outer check).
      */
-    @Test
+    /*@Test
     public void registerVirtualMachineWithSuddenNetworkConnectionLossOuterCheck() {
         //represents name of a virtual machine which should be newly registered
         String vmName = "VirtualMachine_01";
@@ -197,7 +197,7 @@ public class VirtualizationToolManagerImplTest {
      * there appears any connection problem while the registration is being
      * processed (inner check).
      */
-    @Test
+    /*@Test
     public void registerVirtualMachineWithSuddenNetworkConnectionLossInnerCheck() {
         //represents name of a virtual machine which should be newly registered
         String vmName = "VirtualMachine_01";
@@ -224,7 +224,7 @@ public class VirtualizationToolManagerImplTest {
      * machine more than once (if virtual machine is still in the list of
      * registered virtual machines) on a particular physical machine.
      */
-    @Test
+    /*@Test
     public void registerAlreadyRegisteredVirtualMachine() {
         //represents name of a virtual machine which should be newly registered
         String vmName = "VirtualMachine_01";
@@ -248,7 +248,7 @@ public class VirtualizationToolManagerImplTest {
      * This test tests that there cannot be registered a virtual machine which
      * is not present in a default folder for virtual machines of VirtualBox.
      */
-    @Test
+    /*@Test
     public void registerNonexistentVirtualMachine() {
         //represents name of a virtual machine which should be newly registered
         String vmName = "VirtualMachine_01";
@@ -275,7 +275,7 @@ public class VirtualizationToolManagerImplTest {
      * there is returned the required VirtualMachine object and no further steps
      * are performed.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByIdWithSomeMatch() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -301,7 +301,7 @@ public class VirtualizationToolManagerImplTest {
      * required ID on a particular physical machine and that this result is
      * supported with an informing message on a standard output.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByIdWithNoMatch() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -325,7 +325,7 @@ public class VirtualizationToolManagerImplTest {
      * returned a null VirtualMachine object and on a standard error output
      * should appear an informing error message.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByIdWithNullUUID() {
 
         VirtualMachine actVM = sut.findVirtualMachineById(null);
@@ -345,7 +345,7 @@ public class VirtualizationToolManagerImplTest {
      * returned a null VirtualMachine object and on a standard error output
      * should appear an informing error message.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByIdWithEmptyUUID() {
 
         VirtualMachine actVM = sut.findVirtualMachineById(UUID.fromString(""));
@@ -366,7 +366,7 @@ public class VirtualizationToolManagerImplTest {
      * informing error message when there is made an attempt to get a virtual
      * machine from a disconnected physical machine.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByIdOnDisconnectedPhysicalMachine() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -392,7 +392,7 @@ public class VirtualizationToolManagerImplTest {
      * (before NativeVBoxManager::getVirtualMachine() method call - outer
      * check).
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByIdWithSuddenNetworkConnectionLossOuterCheck() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -423,7 +423,7 @@ public class VirtualizationToolManagerImplTest {
      * NativeVBoxManager::getVirtualMachine() method has been called - inner
      * check).
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByIdWithSuddenNetworkConnectionLossInnerCheck() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -451,7 +451,7 @@ public class VirtualizationToolManagerImplTest {
      * there is returned the required VirtualMachine object and no further steps
      * are performed.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByNameWithSomeMatch() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -477,7 +477,7 @@ public class VirtualizationToolManagerImplTest {
      * required name on a particular physical machine and that this result is
      * supported with an informing message on a standard output.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByNameWithNoMatch() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -501,7 +501,7 @@ public class VirtualizationToolManagerImplTest {
      * there is returned a null VirtualMachine object and on a standard error
      * output should appear an informing error message.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByNameWithNullName() {
 
         VirtualMachine actVM = sut.findVirtualMachineByName(null);
@@ -521,7 +521,7 @@ public class VirtualizationToolManagerImplTest {
      * there is returned a null VirtualMachine object and on a standard error
      * output should appear an informing error message.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByNameWithEmptyName() {
 
         VirtualMachine actVM = sut.findVirtualMachineByName("");
@@ -542,7 +542,7 @@ public class VirtualizationToolManagerImplTest {
      * informing error message when there is made an attempt to get a virtual
      * machine from a disconnected physical machine.
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByNameOnDisconnectedPhysicalMachine() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -568,7 +568,7 @@ public class VirtualizationToolManagerImplTest {
      * (before NativeVBoxManager::getVirtualMachine() method call - outer
      * check).
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByNameWithSuddenNetworkConnectionLossOuterCheck() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -599,7 +599,7 @@ public class VirtualizationToolManagerImplTest {
      * NativeVBoxManager::getVirtualMachine() method has been called - inner
      * check).
      */
-    @Test
+    /*@Test
     public void findVirtualMachineByNameWithSuddenNetworkConnectionLossInnerCheck() {
         //represents a virtual machine which is required and should be returned as a result of get operation
         VirtualMachine expVM = new VMBuilder().build();
@@ -626,7 +626,7 @@ public class VirtualizationToolManagerImplTest {
      * physical machine, then the list of this virtual machines is returned as a
      * result of get operation and no message should be written to any output.
      */
-    @Test
+    /*@Test
     public void getVirtualMachinesWithReturnedNonemptyVMsList() {
         //represents first of two registered virtual machines from a particular physical machine
         VirtualMachine vm1 = new VMBuilder().build();
@@ -654,7 +654,7 @@ public class VirtualizationToolManagerImplTest {
      * without any informing message on any output when the method
      * VirtualizationToolManagerImpl::getVirtualMachines() is called.
      */
-    @Test
+    /*@Test
     public void getVirtualMachinesWithReturnedEmptyVMsList() {
         //means that the hostMachine is connected and so there can be done a work with it
         when(conManMocked.isConnected(hostMachine)).thenReturn(true);
@@ -675,7 +675,7 @@ public class VirtualizationToolManagerImplTest {
      * connected and an informing error message appears on standard error
      * output.
      */
-    @Test
+    /*@Test
     public void getVirtualMachinesFromDisconnectedPhysicalMachine() {
         //means that the host machine is not connected and so there cannot be done any work with it
         when(conManMocked.isConnected(hostMachine)).thenReturn(false);
@@ -697,7 +697,7 @@ public class VirtualizationToolManagerImplTest {
      * appears any connection problem during connection test (before
      * NativeVBoxAPIManager::getAllVirtualMachines() method call - outer check).
      */
-    @Test
+    /*@Test
     public void getVirtualMachinesWithSuddenNetworkConnectionLossOuterCheck() {
        //means that the host machine was connected, but it is not now, because there did not 
         //manage to connect to it again (probably any network connection problem or server problem)
@@ -725,7 +725,7 @@ public class VirtualizationToolManagerImplTest {
      * NativeVBoxAPIManager::getAllVirtualMachines() method has been called - inner
      * check).
      */
-    @Test
+    /*@Test
     public void getVirtualMachinesWithSuddenNetworkConnectionLossInnerCheck() {
         //means that the hostMachine is connected and so there can be done a work with it
         when(conManMocked.isConnected(hostMachine)).thenReturn(true);
@@ -749,7 +749,7 @@ public class VirtualizationToolManagerImplTest {
      * when all important values are valid and that there appears an informing
      * message on a standard output about successful operation.
      */
-    @Test
+    /*@Test
     public void removeValidVirtualMachine() {
         //represents a virtual machine which intended to be removed
         VirtualMachine vm = new VMBuilder().build();
@@ -770,7 +770,7 @@ public class VirtualizationToolManagerImplTest {
      * VirtualizationToolManagerImpl::removeVirtualMachine() is called with a
      * null object of type VirtualMachine and the operation is aborted.
      */
-    @Test
+    /*@Test
     public void removeNullVirtualMachine() {
 
         sut.removeVirtualMachine(null);
@@ -790,7 +790,7 @@ public class VirtualizationToolManagerImplTest {
      * type PhysicalMachine, because there is no information on which physical
      * machine should be the virtual machine located.
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineWithNullPhysicalMachine() {
         //represents a virtual machine which is intended to be removed
         VirtualMachine vm = new VMBuilder().hostMachine(null).build();
@@ -813,7 +813,7 @@ public class VirtualizationToolManagerImplTest {
      * the error message informing about this state is written on a standard
      * error output.
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineWithIncorrectPhysicalMachine() {
         //represents a virtual machine which is intended to be removed
         VirtualMachine vm = new VMBuilder().hostMachine(new PMBuilder().addressIP("11.11.11.0").build()).build();
@@ -836,7 +836,7 @@ public class VirtualizationToolManagerImplTest {
      * error message informing about this problem is written on a standard error
      * output.
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineWithNullId() {
         //represents a virtual machine which is intended to be removed
         VirtualMachine vm = new VMBuilder().id(null).build();
@@ -858,7 +858,7 @@ public class VirtualizationToolManagerImplTest {
      * error message informing about this problem is written on a standard error
      * output.
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineWithEmptyId() {
         //represents a virtual machine which is intended to be removed
         VirtualMachine vm = new VMBuilder().id(UUID.fromString("")).build();
@@ -879,7 +879,7 @@ public class VirtualizationToolManagerImplTest {
      * successfully if the virtual machine which should be removed does not
      * exist on a particular physical machine.
      */
-    @Test
+    /*@Test
     public void removeNonexistentVirtualMachine() {
         //represents a virtual machine which should be removed
         VirtualMachine vm = new VMBuilder().build();
@@ -904,7 +904,7 @@ public class VirtualizationToolManagerImplTest {
      * successfully if the virtual machine which should be removed is not in a
      * required state for its removing.
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineWithInvalidState() {
         //represents a virtual machine which should be removed
         VirtualMachine vm = new VMBuilder().build();
@@ -928,7 +928,7 @@ public class VirtualizationToolManagerImplTest {
      * virtual machine removed is not connected then the virtual machine cannot
      * be removed.
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineOnDisconnectedPhysicalMachine() {
         //represents a virtual machine which is intended to be removed
         VirtualMachine vm = new VMBuilder().build();
@@ -950,7 +950,7 @@ public class VirtualizationToolManagerImplTest {
      * appears any connection problem during connection test (before
      * NativeVBoxAPIManager::remveVirtualMachine() method call - outer check).
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineWithSuddenNetworkConnectionLossOuterCheck() {
         //represents a virtual machine which should be removed
         VirtualMachine vm = new VMBuilder().build();
@@ -978,7 +978,7 @@ public class VirtualizationToolManagerImplTest {
      * NativeVBoxAPIManager::removeVirtualMachine() method has been called - inner
      * check).
      */
-    @Test
+    /*@Test
     public void removeVirtualMachineWithSuddenNetworkConnectionLossInnerCheck() {
         //represents a virtual machine which should be removed
         VirtualMachine vm = new VMBuilder().build();
@@ -1004,7 +1004,7 @@ public class VirtualizationToolManagerImplTest {
      * there is returned a virtual machine clone as a result and on a standard
      * output appears informing message that the operation was successful.
      */
-    @Test
+    /*@Test
     public void cloneValidVirtualMachine() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
@@ -1035,7 +1035,7 @@ public class VirtualizationToolManagerImplTest {
      * as a result and on a standard error output appears an error informing
      * message.
      */
-    @Test
+    /*@Test
     public void cloneNullVirtualMachine() {
 
         VirtualMachine actVMClone = sut.cloneVirtualMachine(null, CloneType.FULL_FROM_ALL_STATES);
@@ -1058,7 +1058,7 @@ public class VirtualizationToolManagerImplTest {
      * object of type VirtualMachine and on a standard error output appears an
      * error informing message.
      */
-    @Test
+    /*@Test
     public void cloneVirtualMachineWithNullPhysicalMachine() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().hostMachine(null).build();
@@ -1084,7 +1084,7 @@ public class VirtualizationToolManagerImplTest {
      * started and there is returned a null object of type VirtualMachine and on
      * a standard error output appears an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneVirtualMachineWithIncorrectPhysicalMachine() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().hostMachine(new PMBuilder().addressIP("11.11.11.0").build()).build();
@@ -1108,7 +1108,7 @@ public class VirtualizationToolManagerImplTest {
      * started and there is returned a null object of type VirtualMachine and on
      * a standard error output appears an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneVirtualMachineWithNullCloneMode() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
@@ -1141,7 +1141,7 @@ public class VirtualizationToolManagerImplTest {
      * even started and there is returned a null object of type VirtualMachine
      * and on a standard error output appears an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneVirtualMachineOnDisconnectedPhysicalMachine() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
@@ -1165,7 +1165,7 @@ public class VirtualizationToolManagerImplTest {
      * aborted and there is returned a null object of type VirtualMachine and on
      * a standard error output appears an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneNonexistentVirtualMachine() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
@@ -1193,7 +1193,7 @@ public class VirtualizationToolManagerImplTest {
      * null object of type VirtualMachine and on a standard error output appears
      * an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneInaccessibleVirtualMachine() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
@@ -1221,7 +1221,7 @@ public class VirtualizationToolManagerImplTest {
      * null object of type VirtualMachine and on a standard error output appears
      * an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneVirtualMachineWithIncorrectState() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
@@ -1249,7 +1249,7 @@ public class VirtualizationToolManagerImplTest {
      * check) and there is returned a null object of type VirtualMachine and on
      * a standard error output appears an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneVirtualMachineWithSuddenNetworkConnectionLossOuterCheck() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
@@ -1279,7 +1279,7 @@ public class VirtualizationToolManagerImplTest {
      * - inner check) and there is returned a null object of type VirtualMachine
      * and on a standard error output appears an error informing message.
      */
-    @Test
+    /*@Test
     public void cloneVirtualMachineWithSuddenNetworkConnectionLossInnerCheck() {
         //represents a virtual machine which should be cloned
         VirtualMachine origVM = new VMBuilder().build();
