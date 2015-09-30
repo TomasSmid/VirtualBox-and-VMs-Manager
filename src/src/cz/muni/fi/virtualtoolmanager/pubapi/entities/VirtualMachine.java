@@ -52,22 +52,22 @@ public final class VirtualMachine implements Comparable<VirtualMachine>{
         private String identifierOfOS = "Unknown";
         
         public Builder(UUID id, String vmName, PhysicalMachine hostMachine){
-            if(id == null || id.toString().isEmpty()){
-                throw new IllegalArgumentException("Virtual machine inicialization failure: "
+            if(id == null || id.toString().trim().isEmpty()){
+                throw new IllegalArgumentException("Virtual machine initialization failure: "
                         + " ID must not be null nor empty.");
             }else{
                 this.id = id;
             }
             
-            if(vmName == null || vmName.isEmpty()){
-                throw new IllegalArgumentException("Virtual machine inicialization failure: "
+            if(vmName == null || vmName.trim().isEmpty()){
+                throw new IllegalArgumentException("Virtual machine initialization failure: "
                         + " Name of a virtual machine must not be null nor empty.");
             }else{
                 this.name = vmName;
             }
             
             if(hostMachine == null){
-                throw new IllegalArgumentException("Virtual machine inicialization failure: "
+                throw new IllegalArgumentException("Virtual machine initialization failure: "
                         + " Host machine of a virtual machine must be specified.");
             }else{
                 this.hostMachine = hostMachine;

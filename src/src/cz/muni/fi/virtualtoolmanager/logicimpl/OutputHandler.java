@@ -22,23 +22,31 @@ import java.io.PrintStream;
  * @author Tomáš Šmíd
  */
 class OutputHandler {
-    private static PrintStream stdOutput = System.out;
-    private static PrintStream stdErrOutput = System.err;
+    private static PrintStream outputStream = System.out;
+    private static PrintStream errOutputStream = System.err;
     
-    public static void setStandardOutput(PrintStream printStream){
-        stdOutput = printStream;
+    public static void setOutputStream(PrintStream printStream){
+        outputStream = printStream;
     }
     
-    public static void setStandardErrorOutput(PrintStream printStream){
-        stdErrOutput = printStream;
+    public static void setErrorOutputStream(PrintStream printStream){
+        errOutputStream = printStream;
+    }
+    
+    public static PrintStream getOutputStream(){
+        return outputStream;
+    }
+    
+    public static PrintStream getErrorOutputStream(){
+        return errOutputStream;
     }
     
     public void printMessage(String message){
-        print(stdOutput,message);
+        print(outputStream,message);
     }
     
     public void printErrorMessage(String message){
-        print(stdErrOutput,message);
+        print(errOutputStream,message);
     }
     
     private void print(PrintStream printStream, String message){

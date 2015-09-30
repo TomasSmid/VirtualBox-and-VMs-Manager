@@ -83,9 +83,13 @@ public class ConnectionManagerImpl implements ConnectionManager{
         
         outputHandler.printMessage("Disconnecting from the physical machine " + physicalMachine);
         
-        //output stream set up to null - no info messages are required on standard output stream
-        //error output stream set up to auxilliary stream - no error messages are erquired on
-        //standard error output, but the error message will be needed if there appears an error while the method this::connectTo() is being processed
+        //preserve the original output streams and then set up new streams
+        PrintStream origOutStream = OutputHandler.getOutputStream();
+        PrintStream origErrStream = OutputHandler.getErrorOutputStream();
+        //output stream set up to null - no info messages are required on watched output stream
+        //error output stream set up to auxilliary stream - no error messages are required on
+        //watched error output stream, but the error message will be needed if there appears 
+        //an error while the method this::connectTo() is being processed
         final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
         setOutputStreams(null, new PrintStream(errContent));
         
@@ -93,7 +97,7 @@ public class ConnectionManagerImpl implements ConnectionManager{
         VirtualizationToolManager virtualizationToolManager = connectTo(physicalMachine);
         if(virtualizationToolManager == null){
             //set up output streams back to the standard output stream and standard error output stream
-            setOutputStreams(System.out, System.err);
+            setOutputStreams(origOutStream, origErrStream);
             outputHandler.printErrorMessage("Disconnection operation failure: "
                     + "There could not be stopped the work with virtual machines "
                     + "properly, " + getReasonOfDisconnectionFailure(errContent.toString()));
@@ -104,7 +108,7 @@ public class ConnectionManagerImpl implements ConnectionManager{
         
         //set up output streams back to the standard output stream and standard error output stream for
         //information provision while the work with virtual machines is being stopped
-        setOutputStreams(System.out, System.err);
+        setOutputStreams(origOutStream, origErrStream);
         //stop working with all virtual machines from the physical machine and shut the running
         //virtual machines down
         virtualizationToolManager.close();
@@ -148,8 +152,8 @@ public class ConnectionManagerImpl implements ConnectionManager{
     }
     
     private void setOutputStreams(PrintStream stdOutput, PrintStream stdErrOutput){
-        OutputHandler.setStandardOutput(stdOutput);
-        OutputHandler.setStandardErrorOutput(stdErrOutput);        
+        OutputHandler.setOutputStream(stdOutput);
+        OutputHandler.setErrorOutputStream(stdErrOutput);        
     }
     
     private void establishConnection(PhysicalMachine physicalMachine) throws ConnectionFailureException,

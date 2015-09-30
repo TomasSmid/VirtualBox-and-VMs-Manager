@@ -21,6 +21,10 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  */
 public class UnexpectedVMStateException extends Exception{
     
+    public UnexpectedVMStateException(){
+        super();
+    }
+    
     public UnexpectedVMStateException(String msg){
         super(msg);
     }

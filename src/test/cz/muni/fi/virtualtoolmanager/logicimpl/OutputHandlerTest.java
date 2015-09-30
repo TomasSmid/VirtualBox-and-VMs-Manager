@@ -45,8 +45,8 @@ public class OutputHandlerTest {
     public void cleanUp(){
         System.setOut(null);
         System.setErr(null);
-        OutputHandler.setStandardErrorOutput(null);
-        OutputHandler.setStandardOutput(null);
+        OutputHandler.setErrorOutputStream(null);
+        OutputHandler.setOutputStream(null);
     }
     
     /**
@@ -57,7 +57,7 @@ public class OutputHandlerTest {
     @Test
     public void printValidMessage(){
         //this step ensures the print stream is set up as standard output stream
-        OutputHandler.setStandardOutput(System.out);
+        OutputHandler.setOutputStream(System.out);
         String message = "Message for check";
         
         sut.printMessage(message);
@@ -73,7 +73,7 @@ public class OutputHandlerTest {
     @Test
     public void printNullMessage(){
         //this step ensures the print stream is set up as standard output stream
-        OutputHandler.setStandardOutput(System.out);
+        OutputHandler.setOutputStream(System.out);
         
         sut.printMessage(null);
         
@@ -88,7 +88,7 @@ public class OutputHandlerTest {
     @Test
     public void printEmptyMessage(){
         //this step ensures the print stream is set up as standard output stream
-        OutputHandler.setStandardOutput(System.out);
+        OutputHandler.setOutputStream(System.out);
         
         sut.printMessage("");        
         sut.printMessage("       ");//message with white spaces
@@ -104,7 +104,7 @@ public class OutputHandlerTest {
     @Test
     public void printMessageWithNullPrintStream(){
         //this step ensures the print stream is set up as null print stream
-        OutputHandler.setStandardOutput(null);
+        OutputHandler.setOutputStream(null);
         String message = "Message for check";
         
         sut.printMessage(message);
@@ -120,7 +120,7 @@ public class OutputHandlerTest {
     @Test
     public void printValidErrorMessage(){
         //this step ensures the print stream is set up as standard error output stream
-        OutputHandler.setStandardErrorOutput(System.err);
+        OutputHandler.setErrorOutputStream(System.err);
         String message = "Message for check";
         
         sut.printErrorMessage(message);
@@ -136,7 +136,7 @@ public class OutputHandlerTest {
     @Test
     public void printNullErrorMessage(){
         //this step ensures the print stream is set up as a standard error output stream
-        OutputHandler.setStandardErrorOutput(System.err);
+        OutputHandler.setErrorOutputStream(System.err);
         
         sut.printErrorMessage(null);
         
@@ -151,7 +151,7 @@ public class OutputHandlerTest {
     @Test
     public void printEmptyErrorMessage(){
         //this step ensures the print stream is set up as standard error output stream
-        OutputHandler.setStandardErrorOutput(System.err);
+        OutputHandler.setErrorOutputStream(System.err);
         
         sut.printErrorMessage("");        
         sut.printErrorMessage("       ");//message with white spaces
@@ -167,7 +167,7 @@ public class OutputHandlerTest {
     @Test
     public void printErrorMessageWithNullPrintStream(){
         //this step ensures the print stream is set up as null print stream
-        OutputHandler.setStandardErrorOutput(null);
+        OutputHandler.setErrorOutputStream(null);
         String message = "Message for check";
         
         sut.printErrorMessage(message);
@@ -184,8 +184,8 @@ public class OutputHandlerTest {
     @Test
     public void printMessageAndErrorMessageWithSamePrintStream(){
         //both printed streams are set up as the standard output stream
-        OutputHandler.setStandardErrorOutput(System.out);
-        OutputHandler.setStandardOutput(System.out);
+        OutputHandler.setErrorOutputStream(System.out);
+        OutputHandler.setOutputStream(System.out);
         String message1 = "Message1 for check";
         String message2 = "Message2 for check";
         
@@ -206,9 +206,9 @@ public class OutputHandlerTest {
     @Test
     public void printMessageWithOutAndErrPrintStream(){
         //print stream is set up as the standard error output stream
-        OutputHandler.setStandardErrorOutput(System.err);
+        OutputHandler.setErrorOutputStream(System.err);
         //print stream is set up as the standard output stream
-        OutputHandler.setStandardOutput(System.out);
+        OutputHandler.setOutputStream(System.out);
         String message = "Message for check";
         
         sut.printMessage(message);

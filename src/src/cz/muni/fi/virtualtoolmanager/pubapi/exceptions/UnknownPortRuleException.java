@@ -21,6 +21,10 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  */
 public class UnknownPortRuleException extends Exception{
     
+    public UnknownPortRuleException(){
+        super();
+    }
+    
     public UnknownPortRuleException(String msg){
         super(msg);
     }

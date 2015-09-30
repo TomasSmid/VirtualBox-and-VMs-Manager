@@ -29,9 +29,9 @@ public interface VirtualMachineManager {
     
     public void shutDownVM(VirtualMachine virtualMachine);
     
-    public void addPortRule(VirtualMachine virtualMachine, PortRule rule);
+    public void addPortRule(VirtualMachine virtualMachine, PortRule portRule);
     
-    public void deletePortRule(VirtualMachine virtualMachine, PortRule rule);
+    public void deletePortRule(VirtualMachine virtualMachine, PortRule portRule);
     
     public void deleteAllPortRules(VirtualMachine virtualMachine);
     

@@ -69,14 +69,14 @@ public class ConnectionManagerImplTest {
         whenNew(NativeVBoxAPIConnection.class).withNoArguments().thenReturn(natAPIConMock);
         whenNew(VirtualizationToolManagerImpl.class).withAnyArguments().thenReturn(vtmMock);
         sut = new ConnectionManagerImpl();
-        OutputHandler.setStandardErrorOutput(new PrintStream(errContent));
-        OutputHandler.setStandardOutput(new PrintStream(outContent));
+        OutputHandler.setErrorOutputStream(new PrintStream(errContent));
+        OutputHandler.setOutputStream(new PrintStream(outContent));
     }
     
     @After
     public void cleanUp(){
-        OutputHandler.setStandardErrorOutput(null);
-        OutputHandler.setStandardOutput(null);
+        OutputHandler.setErrorOutputStream(null);
+        OutputHandler.setOutputStream(null);
     }
     
     /**
@@ -379,8 +379,7 @@ public class ConnectionManagerImplTest {
         //represents a physical machine which should be disconnected
         PhysicalMachine pm = new PMBuilder().build();
         //mock object of type ConnectionFailureException for better test control
-        ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
-        System.setErr(new PrintStream(errContent));
+        ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);        
         
         //this step ensures that there should follow all neccessary steps for correct end up of work
         //with physical machine and its disconnection
@@ -399,7 +398,6 @@ public class ConnectionManagerImplTest {
         assertFalse("Physical machine " + pm + " should not already be connected", conPhysMachMock.isConnected(pm));
         assertFalse("There should be written error message that physical machine " + pm + " could not "
                   + "be correctly disconnected", errContent.toString().isEmpty());
-        System.setErr(null);
     }
     
     /**
