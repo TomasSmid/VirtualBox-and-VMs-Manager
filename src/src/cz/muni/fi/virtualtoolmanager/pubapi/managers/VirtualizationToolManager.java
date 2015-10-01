@@ -38,7 +38,5 @@ public interface VirtualizationToolManager {
     
     public VirtualMachine cloneVirtualMachine(VirtualMachine virtualMachine, CloneType type);
     
-    public VirtualMachineManager getVirtualMachineManager();
-    
     public void close();
 }

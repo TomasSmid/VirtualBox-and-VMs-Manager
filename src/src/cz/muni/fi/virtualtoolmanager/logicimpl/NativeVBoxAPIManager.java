@@ -126,13 +126,14 @@ class NativeVBoxAPIManager {
         }
         
         IVirtualBox vbox = virtualBoxManager.getVBox();        
-        IMachine vboxMachine = null;
+        IMachine vboxMachine;
         try{
             vboxMachine = vbox.findMachine(nameOrId);
         }catch(VBoxException ex){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnknownVirtualMachineException(getErrorMessage(3, physicalMachine, nameOrId));
+            //without error message - in this case has not to be VM found out
+            throw new UnknownVirtualMachineException();
         }
         
         IGuestOSType guestOSType = vbox.getGuestOSType(vboxMachine.getOSTypeId());
@@ -153,7 +154,7 @@ class NativeVBoxAPIManager {
         }catch(VBoxException ex){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new ConnectionFailureException(getErrorMessage(4, physicalMachine, ""));
+            throw new ConnectionFailureException(getErrorMessage(3, physicalMachine, ""));
         }
         
         IVirtualBox vbox = virtualBoxManager.getVBox();        
@@ -163,7 +164,7 @@ class NativeVBoxAPIManager {
         }catch(VBoxException ex){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnknownVirtualMachineException(getErrorMessage(5, physicalMachine, "") + ex.getMessage());
+            throw new UnknownVirtualMachineException(getErrorMessage(4, physicalMachine, "") + ex.getMessage());
         }
         
         if(vboxMachines.isEmpty()){
@@ -197,7 +198,7 @@ class NativeVBoxAPIManager {
         }catch(VBoxException ex){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new ConnectionFailureException(getErrorMessage(6, virtualMachine.getHostMachine(),
+            throw new ConnectionFailureException(getErrorMessage(5, virtualMachine.getHostMachine(),
                                                  virtualMachine.getName()));
         }
         
@@ -208,7 +209,7 @@ class NativeVBoxAPIManager {
         }catch(VBoxException ex){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnknownVirtualMachineException(getErrorMessage(7, virtualMachine.getHostMachine(),
+            throw new UnknownVirtualMachineException(getErrorMessage(6, virtualMachine.getHostMachine(),
                                                      virtualMachine.getName()));
         }
         
@@ -222,7 +223,7 @@ class NativeVBoxAPIManager {
             }
         }else{
             if(vboxMachine.getState() != MachineState.PoweredOff){
-                throw new UnexpectedVMStateException(getErrorMessage(8, virtualMachine.getHostMachine(),
+                throw new UnexpectedVMStateException(getErrorMessage(7, virtualMachine.getHostMachine(),
                                                      virtualMachine.getName()));
             }
 
@@ -252,7 +253,7 @@ class NativeVBoxAPIManager {
         }catch(VBoxException ex){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new ConnectionFailureException(getErrorMessage(9, virtualMachine.getHostMachine(),
+            throw new ConnectionFailureException(getErrorMessage(8, virtualMachine.getHostMachine(),
                                                  virtualMachine.getName()));
         }
         
@@ -263,14 +264,14 @@ class NativeVBoxAPIManager {
         }catch(VBoxException ex){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnknownVirtualMachineException(getErrorMessage(10, virtualMachine.getHostMachine(),
+            throw new UnknownVirtualMachineException(getErrorMessage(9, virtualMachine.getHostMachine(),
                                                      virtualMachine.getName()));
         }
         
         if(!vboxMachine.getAccessible()){
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnexpectedVMStateException(getErrorMessage(11, virtualMachine.getHostMachine(),
+            throw new UnexpectedVMStateException(getErrorMessage(10, virtualMachine.getHostMachine(),
                                                  virtualMachine.getName()) + vboxMachine.getAccessError().getText());
         }
         
@@ -279,7 +280,7 @@ class NativeVBoxAPIManager {
             case Saved     :
             case Running   :
             case Paused    : break;
-            default        : throw new UnexpectedVMStateException(getErrorMessage(12, virtualMachine.getHostMachine(),
+            default        : throw new UnexpectedVMStateException(getErrorMessage(11, virtualMachine.getHostMachine(),
                                                                   virtualMachine.getName()));
         }
         
@@ -338,20 +339,19 @@ class NativeVBoxAPIManager {
                                         + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
                                /* 01 */ "Virtual machine registration operation failure: There is no virtual machine folder named \"" + vmNameOrId + "\" with configuration file \"" + vmNameOrId + ".vbox\" in VirtualBox default machine folder \"VirtualBox VMs\".",
                                /* 02 */ "Connection operation failure while trying to retrieve virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                                        + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",                               
+                               /* 03 */ "Connection operation failure while trying to retrieve all virtual machines: Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 03 */ "Virtual machine retrieve operation failure: There was made an attempt to retrieve nonexistent virtual machine " + vmNameOrId + " from physical machine " + physicalMachine + ".",
-                               /* 04 */ "Connection operation failure while trying to retrieve all virtual machines: Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                               /* 04 */ "All virtual machines retrieve operation failure: There did not manage to retrieve virtual machines from physical machine " + physicalMachine + " -> ",
+                               /* 05 */ "Connection operation failure while trying to remove virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 05 */ "All virtual machines retrieve operation failure: There did not manage to retrieve virtual machines from physical machine " + physicalMachine + " -> ",
-                               /* 06 */ "Connection operation failure while trying to remove virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                               /* 06 */ "Virtual machine removal operation failure: There is no virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + ". Nonexistent virtual machine cannot be removed.",
+                               /* 07 */ "Virtual machine removal operation failure: Virtual machine " + vmNameOrId + " from physical machine " + physicalMachine + " cannot be removed, because it is not powered off.",
+                               /* 08 */ "Connection operation failure while trying to clone virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 07 */ "Virtual machine removal operation failure: There is no virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + ". Nonexistent virtual machine cannot be removed.",
-                               /* 08 */ "Virtual machine removal operation failure: Virtual machine " + vmNameOrId + " from physical machine " + physicalMachine + " cannot be removed, because it is not powered off.",
-                               /* 09 */ "Connection operation failure while trying to clone virtual machine " + vmNameOrId + ": Unable to connect to the physical machine " + physicalMachine + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
-                                        + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 10 */ "Virtual machine cloning operation failure: There is no virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + ". Nonexistent virtual machine cannot be cloned.",
-                               /* 11 */ "Virtual machine cloning operation failure: Virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + " cannot be cloned, because it is not accessible -> ",
-                               /* 12 */ "Virtual machine cloning operation failure: Virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + " cannot be cloned, because it is not in a valid state for cloning. The required states are: \"PoweredOff\", \"Saved\", \"Running\", \"Paused\"."};
+                               /* 09 */ "Virtual machine cloning operation failure: There is no virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + ". Nonexistent virtual machine cannot be cloned.",
+                               /* 10 */ "Virtual machine cloning operation failure: Virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + " cannot be cloned, because it is not accessible -> ",
+                               /* 11 */ "Virtual machine cloning operation failure: Virtual machine " + vmNameOrId + " on physical machine " + physicalMachine + " cannot be cloned, because it is not in a valid state for cloning. The required states are: \"PoweredOff\", \"Saved\", \"Running\", \"Paused\"."};
         
         return errMessages[index];
     }

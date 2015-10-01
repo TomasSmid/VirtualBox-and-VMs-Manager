@@ -17,12 +17,20 @@ package cz.muni.fi.virtualtoolmanager.logicimpl;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException;
+import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.CloneType;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -30,65 +38,313 @@ import java.util.UUID;
  */
 public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
     
-    private final NativeVBoxAPIManager nativeVBoxAPIManager;
-    private final ConnectionManager connectionManager;
     private final PhysicalMachine hostMachine;
     
     VirtualizationToolManagerImpl(PhysicalMachine hostMachine){
-        this(hostMachine, new NativeVBoxAPIManager(), new ConnectionManagerImpl());
-    }
-    
-    VirtualizationToolManagerImpl(PhysicalMachine hostMachine, NativeVBoxAPIManager nativeVBoxAPIManager,
-                                  ConnectionManager connectionManager){
         this.hostMachine = hostMachine;
-        this.nativeVBoxAPIManager = nativeVBoxAPIManager;
-        this.connectionManager = connectionManager;
     }
-    
-    /*private final PhysicalMachine hostMachine;
-    
-    VirtualizationToolManagerImpl(PhysicalMachine hostMachine){
-        this.hostMachine = hostMachine;
-    }*/
     
     @Override
     public void registerVirtualMachine(String name) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        OutputHandler outputHandler = new OutputHandler();
+        
+        if(name == null){
+            outputHandler.printErrorMessage("Virtual machine registration operation "
+                    + "failure: There was made an attempt to register a virtual machine "
+                    + "with a null name.");
+            return;
+        }
+        
+        if(name.trim().isEmpty()){
+            outputHandler.printErrorMessage("Virtual machine registration operation "
+                    + "failure: There was made an attempt to register a virtual machine "
+                    + "with an empty name.");
+            return;
+        }
+        
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        if(!connectionManager.isConnected(hostMachine)){
+            outputHandler.printErrorMessage("Virtual machine registration operation "
+                    + "failure: Virtual machine with name \"" + name + "\" cannot be "
+                    + "registered, because the physical machine " + hostMachine 
+                    + " on which should be virtual machine registered is not connected.");
+            return;
+        }
+        
+        outputHandler.printMessage("Registering virtual machine \"" + name + "\"");
+        
+        NativeVBoxAPIManager nativeVBoxAPIManager = new NativeVBoxAPIManager();
+        try{
+            if(!nativeVBoxAPIManager.registerVirtualMachine(hostMachine, name)){
+                outputHandler.printMessage("Virtual machine \"" + name + "\" is already registered");
+            }
+        } catch (UnknownVirtualMachineException ex) {
+            outputHandler.printErrorMessage(ex.getMessage());
+            return;
+        } catch (ConnectionFailureException ex){
+            connectionManager.disconnectFrom(hostMachine);
+            outputHandler.printErrorMessage(ex.getMessage());
+            return;
+        }
+        
+        outputHandler.printMessage("Virtual machine \"" + name + "\" has been registered successfully");
     }
 
     @Override
     public VirtualMachine findVirtualMachineById(UUID id) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        OutputHandler outputHandler = new OutputHandler();
+        //just test if id is not null
+        if(id == null){
+            outputHandler.printErrorMessage("Virtual machine retrieve operation "
+                    + "failure: There was made an attempt to retrieve virtual machine "
+                    + "by a null id.");
+            return null;
+        }
+        //it is possible to call findVirtualMachineByName(), because to native method for VM retrieve is
+        //always given a string parameter
+        return findVirtualMachineByName(id.toString());
     }
 
     @Override
     public VirtualMachine findVirtualMachineByName(String name) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        OutputHandler outputHandler = new OutputHandler();
+        
+        if(name == null){
+            outputHandler.printErrorMessage("Virtual machine retrieve operation "
+                    + "failure: There was made an attempt to retrieve virtual machine "
+                    + "by a null name.");
+            return null;
+        }
+        
+        if(name.trim().isEmpty()){
+            outputHandler.printErrorMessage("Virtual machine retrieve operation "
+                    + "failure: There was made an attempt to retrieve virtual machine "
+                    + "by an empty id or name.");
+            return null;
+        }
+        
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        if(!connectionManager.isConnected(hostMachine)){
+            outputHandler.printErrorMessage("Virtual machine retrieve operation "
+                    + "failure: Virtual machine with name or id \"" + name + "\" "
+                    + "cannot be retrieved, because the physical machine " + hostMachine
+                    + "is not connected.");
+            return null;
+        }
+        
+        NativeVBoxAPIManager nativeVBoxAPIManager = new NativeVBoxAPIManager();
+        VirtualMachine virtualMachine;
+        try{
+            virtualMachine = nativeVBoxAPIManager.getVirtualMachine(hostMachine, name);
+        } catch (UnknownVirtualMachineException ex){
+            outputHandler.printErrorMessage(ex.getMessage());
+            return null;
+        } catch (ConnectionFailureException ex) {
+            connectionManager.disconnectFrom(hostMachine);
+            outputHandler.printErrorMessage(ex.getMessage());
+            return null;
+        }
+        
+        return virtualMachine;
     }
 
     @Override
     public List<VirtualMachine> getVirtualMachines() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        OutputHandler outputHandler = new OutputHandler();
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        
+        if(!connectionManager.isConnected(hostMachine)){
+            outputHandler.printErrorMessage("All virtual machines retrieve operation "
+                    + "failure: There cannot be retrieved all virtual machines from "
+                    + "physical machine " + hostMachine + ", because it is not connected.");
+            return new ArrayList<>();
+        }
+        
+        NativeVBoxAPIManager nativeVBoxAPIManager = new NativeVBoxAPIManager();
+        List<VirtualMachine> virtualMachines;
+        try{
+            virtualMachines = nativeVBoxAPIManager.getAllVirtualMachines(hostMachine);
+        } catch (UnknownVirtualMachineException ex){
+            outputHandler.printErrorMessage(ex.getMessage());
+            return new ArrayList<>();
+        } catch (ConnectionFailureException ex) {
+            connectionManager.disconnectFrom(hostMachine);
+            outputHandler.printErrorMessage(ex.getMessage());
+            return new ArrayList<>();
+        }
+        
+        return virtualMachines;
     }
 
     @Override
     public void removeVirtualMachine(VirtualMachine virtualMachine) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        OutputHandler outputHandler = new OutputHandler();
+        
+        if(virtualMachine == null){
+            outputHandler.printErrorMessage("Virtual machine removal operation "
+                    + "failure: There was made an attempt to remove a null virtual "
+                    + "machine from physical machine " + hostMachine + ".");
+            return;
+        }
+        
+        if(!virtualMachine.getHostMachine().equals(hostMachine)){
+            outputHandler.printErrorMessage("Virtual machine removal operation "
+                    + "failure: Virtual machine " + virtualMachine + " cannot be "
+                    + "removed, because its physical machine is incorrect.");
+            return;
+        }
+        
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        if(!connectionManager.isConnected(hostMachine)){
+            outputHandler.printErrorMessage("Virtual machine removal operation "
+                    + "failure: Virtual machine " + virtualMachine + " cannot be "
+                    + "removed, because the physical machine " + hostMachine 
+                    + " on which the virtual machine is found is not connected.");
+            return;
+        }
+        
+        outputHandler.printMessage("Removing virtual machine " + virtualMachine 
+                + " from physical machine " + hostMachine);
+        
+        NativeVBoxAPIManager nativeVBoxAPIManager = new NativeVBoxAPIManager();
+        try {
+            nativeVBoxAPIManager.removeVirtualMachine(virtualMachine);
+        } catch (UnknownVirtualMachineException | UnexpectedVMStateException ex) {
+            outputHandler.printErrorMessage(ex.getMessage());
+            return;
+        } catch (ConnectionFailureException ex){
+            connectionManager.disconnectFrom(hostMachine);
+            outputHandler.printErrorMessage(ex.getMessage());
+            return;
+        }
+        
+        outputHandler.printMessage("Virtual machine " + virtualMachine + " removed successfully");
     }
 
     @Override
-    public VirtualMachine cloneVirtualMachine(VirtualMachine virtualMachine, CloneType type) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public VirtualMachineManager getVirtualMachineManager() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public VirtualMachine cloneVirtualMachine(VirtualMachine virtualMachine, CloneType cloneType) {
+        OutputHandler outputHandler = new OutputHandler();
+        
+        if(virtualMachine == null){
+            outputHandler.printErrorMessage("Virtual machine cloning operation "
+                    + "failure: There was made an attempt to clone a null virtual "
+                    + "machine.");
+            return null;
+        }
+        
+        if(cloneType == null){
+            outputHandler.printErrorMessage("Virtual machine cloning operation "
+                    + "failure: There must be specified how the virtual machine "
+                    + virtualMachine + " should be cloned (clone type).");
+            return null;
+        }
+        
+        if(!virtualMachine.getHostMachine().equals(hostMachine)){
+            outputHandler.printErrorMessage("Virtual machine cloning operation "
+                    + "failure: Virtual machine " + virtualMachine + " cannot be "
+                    + "cloned, because its physical machine is incorrect.");
+            return null;
+        }
+        
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        if(!connectionManager.isConnected(hostMachine)){
+            outputHandler.printErrorMessage("Virtual machine cloning operation "
+                    + "failure: Virtual machine " + virtualMachine + " cannot be "
+                    + "cloned, because the physical machine " + hostMachine
+                    + " on which the virtual machine is found is not connected.");
+            return null;
+        }
+        
+        outputHandler.printMessage("Cloning virtual machine " + virtualMachine
+                    + "on physical machine " + hostMachine);
+        
+        NativeVBoxAPIManager nativeVBoxAPIManager = new NativeVBoxAPIManager();
+        VirtualMachine vmClone;
+        try {
+            vmClone = nativeVBoxAPIManager.createVMClone(virtualMachine, cloneType);
+        } catch (UnknownVirtualMachineException | UnexpectedVMStateException ex) {
+            outputHandler.printErrorMessage(ex.getMessage());
+            return null;
+        } catch (ConnectionFailureException ex){
+            connectionManager.disconnectFrom(hostMachine);
+            outputHandler.printErrorMessage(ex.getMessage());
+            return null;
+        }
+        
+        outputHandler.printMessage("Cloning operation finished successfully");
+        return vmClone;
     }
 
     @Override
     public void close() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        OutputHandler outputHandler = new OutputHandler();
+        final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        PrintStream origOutStream = OutputHandler.getOutputStream();
+        PrintStream erigErrStream = OutputHandler.getErrorOutputStream();
+        setOutputStreams(null, new PrintStream(errContent));
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        
+        if(!connectionManager.isConnected(hostMachine)){
+            outputHandler.printErrorMessage("Virtualization tool closing operation "
+                    + "failure: There is none work to be stopped, because physical "
+                    + "machine " + hostMachine + " is not connected.");
+            return;
+        }
+        
+        List<VirtualMachine> virtualMachines = getVirtualMachines();
+        if(virtualMachines.isEmpty()){
+            if(!errContent.toString().isEmpty()){
+                if(!connectionManager.isConnected(hostMachine)){
+                    setOutputStreams(origOutStream, erigErrStream);
+                    outputHandler.printErrorMessage("Virtualization tool closing operation "
+                            + "failure: Work with virtual machines was not stopped properly, "
+                            + "because there occured any connection problem.");
+                    return;
+                }
+            }
+        }
+        
+        VirtualMachineManager virtualMachineManager = new VirtualMachineManagerImpl();
+        for(VirtualMachine virtualMachine : virtualMachines){
+            String vmState = virtualMachineManager.getVMState(virtualMachine);
+            if(vmState == null && !errContent.toString().isEmpty()){
+                if(!connectionManager.isConnected(hostMachine)){
+                    setOutputStreams(origOutStream, erigErrStream);
+                    outputHandler.printErrorMessage("Virtualization tool closing operation "
+                            + "failure: Work with virtual machines was not stopped properly, "
+                            + "because there occured any connection problem.");
+                    return;
+                }
+            }
+            switch(vmState){
+                case "Running":
+                case "Paused" :
+                case "Stuck"  : {
+                    virtualMachineManager.shutDownVM(virtualMachine);
+                    if(!connectionManager.isConnected(hostMachine)){
+                        setOutputStreams(origOutStream, erigErrStream);
+                        outputHandler.printErrorMessage("Virtualization tool closing operation "
+                                + "failure: Work with virtual machines was not stopped properly, "
+                                + "because there occured any connection problem.");
+                        return;
+                    }
+                }
+                default       : break;
+            }
+        }
+        
+        setOutputStreams(origOutStream, erigErrStream);
+        outputHandler.printMessage("Work with virtual machines on physical machine " + hostMachine
+                    + " was successfully stopped");
+    }
+    
+    private void setOutputStreams(PrintStream printStream){
+        setOutputStreams(printStream, printStream);
+    }
+    
+    private void setOutputStreams(PrintStream stdOutput, PrintStream stdErrOutput){
+        OutputHandler.setOutputStream(stdOutput);
+        OutputHandler.setErrorOutputStream(stdErrOutput);        
     }
     
 }
