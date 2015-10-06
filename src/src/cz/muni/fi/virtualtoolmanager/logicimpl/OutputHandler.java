@@ -21,7 +21,7 @@ import java.io.PrintStream;
  *
  * @author Tomáš Šmíd
  */
-class OutputHandler {
+public class OutputHandler {
     private static PrintStream outputStream = System.out;
     private static PrintStream errOutputStream = System.err;
     

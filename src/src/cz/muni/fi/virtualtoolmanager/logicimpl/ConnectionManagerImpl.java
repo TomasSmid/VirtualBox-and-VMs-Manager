@@ -56,6 +56,8 @@ public class ConnectionManagerImpl implements ConnectionManager{
             return null;
         }
         
+        ConnectedPhysicalMachines connectedPhysicalMachines = ConnectedPhysicalMachines.getInstance();
+        connectedPhysicalMachines.add(physicalMachine);
         outputHandler.printMessage("Physical machine " + physicalMachine + " has "
                 + "been connected successfully");
         
@@ -138,12 +140,16 @@ public class ConnectionManagerImpl implements ConnectionManager{
     
     @Override
     public void close() {
-        List<PhysicalMachine> allConnectedPhysicalMachines = getConnectedPhysicalMachines();
+        //List<PhysicalMachine> allConnectedPhysicalMachines = getConnectedPhysicalMachines();
         
-        if(!allConnectedPhysicalMachines.isEmpty()){
+        /*if(!allConnectedPhysicalMachines.isEmpty()){
             for(PhysicalMachine connectedPM : allConnectedPhysicalMachines){
                 disconnectFrom(connectedPM);
             }
+        }*/
+        while(!getConnectedPhysicalMachines().isEmpty()){
+            
+            disconnectFrom(getConnectedPhysicalMachines().get(0));
         }
     }
     

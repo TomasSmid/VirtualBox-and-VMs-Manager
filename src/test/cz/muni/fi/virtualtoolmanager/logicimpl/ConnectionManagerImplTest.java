@@ -35,6 +35,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import org.powermock.api.mockito.PowerMockito;
 import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
@@ -659,13 +660,19 @@ public class ConnectionManagerImplTest {
         PhysicalMachine pm2 = new PMBuilder().addressIP("10.12.11.9").username("Elphon")
                                              .userPassword("22mn54fg").build();
         //a nonempty list of connected physical machines
-        List<PhysicalMachine> pmsList = Arrays.asList(pm1,pm2);
+        List<PhysicalMachine> pmsList1 = Arrays.asList(pm1,pm2);
+        List<PhysicalMachine> pmsList2 = Arrays.asList(pm2);
         //sutl represents the same as sut, but here is it for mocking intention (easier testing)
         ConnectionManagerImpl sutl = mock(ConnectionManagerImpl.class);
         //this step ensures the real method is called
         doCallRealMethod().when(sutl).close();
-        //this step that there will be returned the nonempty list of connected physical machines
-        when(sutl.getConnectedPhysicalMachines()).thenReturn(pmsList);
+        //for the first and the second call, there should be returned a non-empty list with 2 PMs,
+        //for the third and the fourth call, there should be returned a non-empty list with 1 PM
+        //for the fifth(last) call, there should be returned an empty list of PMs when the method
+        //ConnectionManagerImpl::getConnectedPhysicalMachines() is called
+        doReturn(pmsList1).doReturn(pmsList1).
+        doReturn(pmsList2).doReturn(pmsList2).
+        doReturn(new ArrayList<>()).when(sutl).getConnectedPhysicalMachines();
         
         sutl.close();
         

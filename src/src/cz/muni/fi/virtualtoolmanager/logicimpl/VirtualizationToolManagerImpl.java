@@ -77,6 +77,7 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
         try{
             if(!nativeVBoxAPIManager.registerVirtualMachine(hostMachine, name)){
                 outputHandler.printMessage("Virtual machine \"" + name + "\" is already registered");
+                return;
             }
         } catch (UnknownVirtualMachineException ex) {
             outputHandler.printErrorMessage(ex.getMessage());
@@ -277,11 +278,7 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
 
     @Override
     public void close() {
-        OutputHandler outputHandler = new OutputHandler();
-        final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        PrintStream origOutStream = OutputHandler.getOutputStream();
-        PrintStream erigErrStream = OutputHandler.getErrorOutputStream();
-        setOutputStreams(null, new PrintStream(errContent));
+        OutputHandler outputHandler = new OutputHandler();        
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         
         if(!connectionManager.isConnected(hostMachine)){
@@ -291,49 +288,62 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
             return;
         }
         
-        List<VirtualMachine> virtualMachines = getVirtualMachines();
-        if(virtualMachines.isEmpty()){
-            if(!errContent.toString().isEmpty()){
-                if(!connectionManager.isConnected(hostMachine)){
-                    setOutputStreams(origOutStream, erigErrStream);
-                    outputHandler.printErrorMessage("Virtualization tool closing operation "
-                            + "failure: Work with virtual machines was not stopped properly, "
-                            + "because there occured any connection problem.");
-                    return;
-                }
-            }
-        }
+        outputHandler.printMessage("Stopping work with virtual machines on physical machine " + hostMachine);
         
-        VirtualMachineManager virtualMachineManager = new VirtualMachineManagerImpl();
-        for(VirtualMachine virtualMachine : virtualMachines){
-            String vmState = virtualMachineManager.getVMState(virtualMachine);
-            if(vmState == null && !errContent.toString().isEmpty()){
-                if(!connectionManager.isConnected(hostMachine)){
-                    setOutputStreams(origOutStream, erigErrStream);
+        final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        PrintStream origOutStream = OutputHandler.getOutputStream();
+        PrintStream origErrStream = OutputHandler.getErrorOutputStream();
+        setOutputStreams(null, new PrintStream(errContent));
+                
+        List<VirtualMachine> virtualMachines = getVirtualMachines();
+        if(virtualMachines.isEmpty()){            
+            if(!errContent.toString().isEmpty()){
+                setOutputStreams(origOutStream, origErrStream);
+                if(!connectionManager.isConnected(hostMachine)){                    
                     outputHandler.printErrorMessage("Virtualization tool closing operation "
                             + "failure: Work with virtual machines was not stopped properly, "
                             + "because there occured any connection problem.");
                     return;
+                }else{
+                    outputHandler.printErrorMessage("Virtualization tool closing operation "
+                            + "failure: Work with virtual machines was not stopped properly -> "
+                            + errContent.toString());
+                    return;
                 }
             }
-            switch(vmState){
-                case "Running":
-                case "Paused" :
-                case "Stuck"  : {
-                    virtualMachineManager.shutDownVM(virtualMachine);
+        }else{        
+            VirtualMachineManager virtualMachineManager = new VirtualMachineManagerImpl();
+            for(VirtualMachine virtualMachine : virtualMachines){
+                String vmState = virtualMachineManager.getVMState(virtualMachine);
+                if(vmState == null && !errContent.toString().isEmpty()){
                     if(!connectionManager.isConnected(hostMachine)){
-                        setOutputStreams(origOutStream, erigErrStream);
+                        setOutputStreams(origOutStream, origErrStream);
                         outputHandler.printErrorMessage("Virtualization tool closing operation "
                                 + "failure: Work with virtual machines was not stopped properly, "
                                 + "because there occured any connection problem.");
                         return;
                     }
                 }
-                default       : break;
+                switch(vmState){
+                    case "Running":
+                    case "Paused" :
+                    case "Stuck"  : {
+                        virtualMachineManager.shutDownVM(virtualMachine);
+                        if(!connectionManager.isConnected(hostMachine)){
+                            setOutputStreams(origOutStream, origErrStream);
+                            outputHandler.printErrorMessage("Virtualization tool closing operation "
+                                    + "failure: Work with virtual machines was not stopped properly, "
+                                    + "because there occured any connection problem.");
+                            return;
+                        }
+                        break;
+                    }
+                    default       : break;
+                }
             }
         }
         
-        setOutputStreams(origOutStream, erigErrStream);
+        setOutputStreams(origOutStream, origErrStream);
         outputHandler.printMessage("Work with virtual machines on physical machine " + hostMachine
                     + " was successfully stopped");
     }

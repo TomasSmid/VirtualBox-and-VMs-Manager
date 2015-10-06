@@ -433,11 +433,19 @@ class NativeVBoxAPIManager {
     private void removeVMAsStandaloneUnit(IMachine vboxMachine, IVirtualBox vbox){
         IMedium medium = vboxMachine.getMedium("SATA", 0, 0);
         
-        while(medium.getParent().getMachineIds().get(0).equals(vboxMachine.getId())){
-            IMedium m = medium.getParent();
-            medium = m;
-            if(medium.getParent() == null){
-                break;
+        if(medium.getParent() != null){
+            while(medium.getParent().getMachineIds().get(0).equals(vboxMachine.getId())){
+                IMedium m = medium.getParent();
+                medium = m;
+                if(medium.getParent() == null){
+                    break;
+                }
+                if(medium.getParent().getMachineIds() == null){
+                    break;
+                }
+                if(medium.getParent().getMachineIds().get(0) == null){
+                    break;
+                }
             }
         }
         

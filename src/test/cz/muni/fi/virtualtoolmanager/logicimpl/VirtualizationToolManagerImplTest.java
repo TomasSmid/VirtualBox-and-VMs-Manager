@@ -37,12 +37,14 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.virtualbox_4_3.MachineState;
 
 /**
  * This test class ensure unit testing of class VirtualizationToolManagerImpl
@@ -52,22 +54,26 @@ import org.powermock.modules.junit4.PowerMockRunner;
  * @author Tomáš Šmíd
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({VirtualizationToolManagerImpl.class, NativeVBoxAPIManager.class, ConnectionManagerImpl.class})
+@PrepareForTest({VirtualizationToolManagerImpl.class, NativeVBoxAPIManager.class, ConnectionManagerImpl.class,
+                 NativeVBoxAPIMachine.class, VirtualMachineManagerImpl.class})
 public class VirtualizationToolManagerImplTest {
 
     private VirtualizationToolManagerImpl sut;
-    private NativeVBoxAPIManager natAPIManMocked;
+    private NativeVBoxAPIManager natAPIManMock;
+    private NativeVBoxAPIMachine natAPIMachMock;
     private PhysicalMachine hostMachine = new PMBuilder().build();
-    private ConnectionManagerImpl conManMocked;
+    private ConnectionManagerImpl conManMock;
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
 
     @Before
     public void setUp() throws Exception {
-        natAPIManMocked = mock(NativeVBoxAPIManager.class);
-        conManMocked = mock(ConnectionManagerImpl.class);
-        whenNew(NativeVBoxAPIManager.class).withNoArguments().thenReturn(natAPIManMocked);
-        whenNew(ConnectionManagerImpl.class).withNoArguments().thenReturn(conManMocked);
+        natAPIManMock = mock(NativeVBoxAPIManager.class);
+        conManMock = mock(ConnectionManagerImpl.class);
+        natAPIMachMock = mock(NativeVBoxAPIMachine.class);
+        whenNew(NativeVBoxAPIManager.class).withNoArguments().thenReturn(natAPIManMock);
+        whenNew(ConnectionManagerImpl.class).withNoArguments().thenReturn(conManMock);
+        whenNew(NativeVBoxAPIMachine.class).withNoArguments().thenReturn(natAPIMachMock);
         sut = new VirtualizationToolManagerImpl(hostMachine);
         OutputHandler.setOutputStream(new PrintStream(outContent));
         OutputHandler.setErrorOutputStream(new PrintStream(errContent));
@@ -94,10 +100,10 @@ public class VirtualizationToolManagerImplTest {
 
         //there should be returned a positive answer when the method NativeVBoxAPIManager::registerVirtualMachine()
         //is called which means the operation was performed successfully
-        when(natAPIManMocked.registerVirtualMachine(hostMachine, vmName)).thenReturn(true);
+        when(natAPIManMock.registerVirtualMachine(hostMachine, vmName)).thenReturn(true);
         //there should be returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with required physical machine which means that the physical machine is connected and can be worked with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
 
         sut.registerVirtualMachine(vmName);
 
@@ -118,7 +124,7 @@ public class VirtualizationToolManagerImplTest {
     public void registerVirtualMachineWithNullName() throws Exception {
         //there should be returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with required physical machine which means that the physical machine is connected and can be worked with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
 
         //there is made an attempt to register a virtual machine with a null name
         sut.registerVirtualMachine(null);
@@ -127,7 +133,7 @@ public class VirtualizationToolManagerImplTest {
         assertFalse("There should be written a message on a standard error output that there was made an attempt"
                 + "to register a virtual machine with a null name", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIManager::registerVirtualMachine() was not called as expected
-        verify(natAPIManMocked, never()).registerVirtualMachine(hostMachine, null);
+        verify(natAPIManMock, never()).registerVirtualMachine(hostMachine, null);
     }
 
     /**
@@ -140,7 +146,7 @@ public class VirtualizationToolManagerImplTest {
     public void registerVirtualMachineWithEmptyName() throws Exception {
         //there should be returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with required physical machine which means that the physical machine is connected and can be worked with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
 
         //there is made an attempt to register a virtual machine with an empty name
         sut.registerVirtualMachine("");
@@ -149,7 +155,7 @@ public class VirtualizationToolManagerImplTest {
         assertFalse("There should be written a message on a standard error output that there was made an attempt"
                 + "to register a virtual machine with an empty name", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIManager::registerVirtualMachine() was not called as expected
-        verify(natAPIManMocked, never()).registerVirtualMachine(hostMachine, "");
+        verify(natAPIManMock, never()).registerVirtualMachine(hostMachine, "");
     }
 
     /**
@@ -167,7 +173,7 @@ public class VirtualizationToolManagerImplTest {
         //with a required host machine which means the host machine is not connected and that's why the virtual
         //machine cannot be registered (in fact, the negative answer would firsly return
         //ConnectedPhysicalMachine::isConnected())
-        when(conManMocked.isConnected(hostMachine)).thenReturn(false);
+        when(conManMock.isConnected(hostMachine)).thenReturn(false);
 
         sut.registerVirtualMachine(vmName);
 
@@ -176,7 +182,7 @@ public class VirtualizationToolManagerImplTest {
                 + "to register a virtual machine on physical machine which is not available at the moment",
                 errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIManager::registerVirtualMachine() was not called as expected
-        verify(natAPIManMocked, never()).registerVirtualMachine(hostMachine, vmName);
+        verify(natAPIManMock, never()).registerVirtualMachine(hostMachine, vmName);
     }
 
     /**
@@ -196,10 +202,10 @@ public class VirtualizationToolManagerImplTest {
         //there is returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with a required host machine which means the host machine is connected and therefore there can be done
         //any work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be thrown ConnectionFailureException exception when the method
         //NativeVBoxAPIManager::registerVirtualMachine() is called with a required arguments
-        doThrow(conFailExMock).when(natAPIManMocked).registerVirtualMachine(hostMachine, vmName);
+        doThrow(conFailExMock).when(natAPIManMock).registerVirtualMachine(hostMachine, vmName);
         //there should be returned a non-empty string value
         when(conFailExMock.getMessage()).thenReturn("Any error message");
 
@@ -208,7 +214,7 @@ public class VirtualizationToolManagerImplTest {
         assertFalse("There should be written a message on a standard error output that there appeared any"
                 + "connection problem while registration was being processed", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
-        verify(conManMocked).disconnectFrom(hostMachine);
+        verify(conManMock).disconnectFrom(hostMachine);
     }
 
     /**
@@ -226,10 +232,10 @@ public class VirtualizationToolManagerImplTest {
         //there is returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with a required host machine which means the host machine is connected and therefore there can be done
         //any work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //this step simulates the second call of the method VirtualizationToolManager::registerVirtualMachine()
         //with the same virtual machine which is still registered after first call
-        when(natAPIManMocked.registerVirtualMachine(hostMachine, vmName)).thenReturn(false);
+        when(natAPIManMock.registerVirtualMachine(hostMachine, vmName)).thenReturn(false);
 
         sut.registerVirtualMachine(vmName);
 
@@ -254,10 +260,10 @@ public class VirtualizationToolManagerImplTest {
         //there is returned a positive answer when the method ConnectionManagerImpl::isConnected() is called
         //with a required host machine which means the host machine is connected and therefore there can be done
         //any work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be thrown ConnectionFailureException exception when the method
         //NativeVBoxAPIManager::registerVirtualMachine() is called with a required arguments
-        doThrow(unVirtMachExMock).when(natAPIManMocked).registerVirtualMachine(hostMachine, vmName);
+        doThrow(unVirtMachExMock).when(natAPIManMock).registerVirtualMachine(hostMachine, vmName);
         //there should be returned a non-empty string value
         when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
 
@@ -282,11 +288,11 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine expVM = new VMBuilder().build();
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be returned expVM object when the method NativeVBoxAPIManager::getVirtualMachine() is called
         //with an ID of a reguired virtual machine (all conditions (checks) are met at this point and virtual machine
         //can be returned)
-        when(natAPIManMocked.getVirtualMachine(hostMachine, expVM.getId().toString())).thenReturn(expVM);
+        when(natAPIManMock.getVirtualMachine(hostMachine, expVM.getId().toString())).thenReturn(expVM);
 
         VirtualMachine actVM = sut.findVirtualMachineById(expVM.getId());
 
@@ -310,10 +316,10 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine expVM = new VMBuilder().build();
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be returned a null object when the method NativeVBoxAPIManager::getVirtualMachine()
         //is called with an ID of a reguired virtual machine
-        when(natAPIManMocked.getVirtualMachine(hostMachine, expVM.getId().toString())).thenReturn(null);
+        when(natAPIManMock.getVirtualMachine(hostMachine, expVM.getId().toString())).thenReturn(null);
 
         VirtualMachine actVM = sut.findVirtualMachineById(expVM.getId());
         
@@ -338,9 +344,9 @@ public class VirtualizationToolManagerImplTest {
                 + "to get a virtual machine with a null ID", errContent.toString().isEmpty());
         assertNull("The returned virtual machine object should be null", actVM);
         //checks the method NativeVBoxAPIManager::getVirtualMachine() has never been called as expected
-        verify(natAPIManMocked, never()).getVirtualMachine(hostMachine, null);
+        verify(natAPIManMock, never()).getVirtualMachine(hostMachine, null);
         //checks the method ConnectionManagerImpl::isConnected() has never been called as expected
-        verify(conManMocked, never()).isConnected(hostMachine);
+        verify(conManMock, never()).isConnected(hostMachine);
     }
 
     /**
@@ -379,7 +385,7 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine expVM = new VMBuilder().build();
 
         //means that the host machine is not connected and so there cannot be done any work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(false);
+        when(conManMock.isConnected(hostMachine)).thenReturn(false);
 
         VirtualMachine actVM = sut.findVirtualMachineById(expVM.getId());
 
@@ -388,7 +394,7 @@ public class VirtualizationToolManagerImplTest {
                 + "is not connected", errContent.toString().isEmpty());
         assertNull("The returned virtual machine object should be null", actVM);
         //checks the method NativeVBoxAPIManager::getVirtualMachine() has never been called as expected
-        verify(natAPIManMocked, never()).getVirtualMachine(hostMachine, expVM.getId().toString());
+        verify(natAPIManMock, never()).getVirtualMachine(hostMachine, expVM.getId().toString());
     }
 
     /**
@@ -410,11 +416,11 @@ public class VirtualizationToolManagerImplTest {
         ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be thrown a ConnectionFailureException exception when the method
         //NativeVBoxAPIManager::getVirtualMachine() is called and means there occured any connection problem
         //when there was being worked with VirtualBox on the host machine
-        doThrow(conFailExMock).when(natAPIManMocked).getVirtualMachine(hostMachine, expVM.getId().toString());
+        doThrow(conFailExMock).when(natAPIManMock).getVirtualMachine(hostMachine, expVM.getId().toString());
         //there should be returned a non-empty string value
         when(conFailExMock.getMessage()).thenReturn("Any error message");
 
@@ -425,7 +431,7 @@ public class VirtualizationToolManagerImplTest {
                 + "connection problem", errContent.toString().isEmpty());
         assertNull("The returned virtual machine object should be null", actVM);
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
-        verify(conManMocked).disconnectFrom(hostMachine);
+        verify(conManMock).disconnectFrom(hostMachine);
     }
 
     /**
@@ -442,11 +448,11 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine expVM = new VMBuilder().build();
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be returned expVM object when the method NativeVBoxAPIManager::getVirtualMachine() is called
         //with a name of a reguired virtual machine (all conditions (checks) are met at this point and virtual machine
         //can be returned)
-        when(natAPIManMocked.getVirtualMachine(hostMachine, expVM.getName())).thenReturn(expVM);
+        when(natAPIManMock.getVirtualMachine(hostMachine, expVM.getName())).thenReturn(expVM);
 
         VirtualMachine actVM = sut.findVirtualMachineByName(expVM.getName());
 
@@ -470,10 +476,10 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine expVM = new VMBuilder().build();
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be returned a null object when the method NativeVBoxAPIManager::getVirtualMachine()
         //is called with a name of a reguired virtual machine
-        when(natAPIManMocked.getVirtualMachine(hostMachine, expVM.getName())).thenReturn(null);
+        when(natAPIManMock.getVirtualMachine(hostMachine, expVM.getName())).thenReturn(null);
 
         VirtualMachine actVM = sut.findVirtualMachineByName(expVM.getName());
         
@@ -496,9 +502,9 @@ public class VirtualizationToolManagerImplTest {
                 + "to get a virtual machine with a null name", errContent.toString().isEmpty());
         assertNull("The returned virtual machine object should be null", actVM);
         //checks the method NativeVBoxAPIManager::getVirtualMachine() has never been called as expected
-        verify(natAPIManMocked, never()).getVirtualMachine(hostMachine, null);
+        verify(natAPIManMock, never()).getVirtualMachine(hostMachine, null);
         //checks the method ConnectionManagerImpl::isConnected() has never been called as expected
-        verify(conManMocked, never()).isConnected(hostMachine);
+        verify(conManMock, never()).isConnected(hostMachine);
     }
 
     /**
@@ -518,9 +524,9 @@ public class VirtualizationToolManagerImplTest {
                 + "to get a virtual machine with an empty name", errContent.toString().isEmpty());
         assertNull("The returned virtual machine object should be null", actVM);
         //checks the method NativeVBoxAPIManager::getVirtualMachine() has never been called as expected
-        verify(natAPIManMocked, never()).getVirtualMachine(hostMachine, "");
+        verify(natAPIManMock, never()).getVirtualMachine(hostMachine, "");
         //checks the method ConnectionManagerImpl::isConnected() has never been called as expected
-        verify(conManMocked, never()).isConnected(hostMachine);
+        verify(conManMock, never()).isConnected(hostMachine);
     }
 
     /**
@@ -537,7 +543,7 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine expVM = new VMBuilder().build();
 
         //means that the host machine is not connected and so there cannot be done any work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(false);
+        when(conManMock.isConnected(hostMachine)).thenReturn(false);
 
         VirtualMachine actVM = sut.findVirtualMachineByName(expVM.getName());
 
@@ -546,7 +552,7 @@ public class VirtualizationToolManagerImplTest {
                 + "is not connected", errContent.toString().isEmpty());
         assertNull("The returned virtual machine object should be null", actVM);
         //checks the method NativeVBoxAPIManager::getVirtualMachine() has never been called as expected
-        verify(natAPIManMocked, never()).getVirtualMachine(hostMachine, expVM.getName());
+        verify(natAPIManMock, never()).getVirtualMachine(hostMachine, expVM.getName());
     }
 
     /**
@@ -568,11 +574,11 @@ public class VirtualizationToolManagerImplTest {
         ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be thrown a ConnectionFailureException exception when the method
         //NativeVBoxAPIManager::getVirtualMachine() is called and means there occured any connection problem
         //when there was being worked with VirtualBox on the host machine
-        doThrow(conFailExMock).when(natAPIManMocked).getVirtualMachine(hostMachine, expVM.getName());
+        doThrow(conFailExMock).when(natAPIManMock).getVirtualMachine(hostMachine, expVM.getName());
         //there should be returned a non-empty string value
         when(conFailExMock.getMessage()).thenReturn("Any error message");
 
@@ -583,7 +589,7 @@ public class VirtualizationToolManagerImplTest {
                 + "connection problem", errContent.toString().isEmpty());
         assertNull("The returned virtual machine object should be null", actVM);
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
-        verify(conManMocked).disconnectFrom(hostMachine);
+        verify(conManMock).disconnectFrom(hostMachine);
     }
 
     /**
@@ -604,10 +610,10 @@ public class VirtualizationToolManagerImplTest {
         List<VirtualMachine> expVMs = Arrays.asList(vm1, vm2);
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be returned the list of registered virtual machines when the method
         //NativeVBoxAPIManager::getAllVirtualMachines() is called
-        when(natAPIManMocked.getAllVirtualMachines(hostMachine)).thenReturn(expVMs);
+        when(natAPIManMock.getAllVirtualMachines(hostMachine)).thenReturn(expVMs);
 
         List<VirtualMachine> actVMs = sut.getVirtualMachines();
 
@@ -626,10 +632,10 @@ public class VirtualizationToolManagerImplTest {
     @Test
     public void getVirtualMachinesWithReturnedEmptyVMsList() throws Exception {
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be returned an empty list of registered virtual machines when the method
         //NativeVBoxAPIManager::getAllVirtualMachines() is called
-        when(natAPIManMocked.getAllVirtualMachines(hostMachine)).thenReturn(new ArrayList<>());
+        when(natAPIManMock.getAllVirtualMachines(hostMachine)).thenReturn(new ArrayList<>());
 
         List<VirtualMachine> actVMs = sut.getVirtualMachines();
 
@@ -649,7 +655,7 @@ public class VirtualizationToolManagerImplTest {
     @Test
     public void getVirtualMachinesFromDisconnectedPhysicalMachine() throws Exception {
         //means that the host machine is not connected and so there cannot be done any work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(false);
+        when(conManMock.isConnected(hostMachine)).thenReturn(false);
 
         List<VirtualMachine> actVMs = sut.getVirtualMachines();
 
@@ -658,7 +664,7 @@ public class VirtualizationToolManagerImplTest {
                 + "to get all virtual machines from a disconnected physical machine", errContent.toString().isEmpty());
         assertTrue("The list of virtual machines should be empty", actVMs.isEmpty());
         //checks the method NativeVBoxAPIManager::getAllVirtualMachines() has never been called as expected
-        verify(natAPIManMocked, never()).getAllVirtualMachines(hostMachine);
+        verify(natAPIManMock, never()).getAllVirtualMachines(hostMachine);
     }
 
     /**
@@ -678,11 +684,11 @@ public class VirtualizationToolManagerImplTest {
         ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
         
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be thrown a ConnectionFailureException exception when the method
         //NativeVBoxAPIManager::getAllVirtualMachines() is called and means there occured any connection problem
         //when there was being worked with VirtualBox on the host machine
-        doThrow(conFailExMock).when(natAPIManMocked).getAllVirtualMachines(hostMachine);
+        doThrow(conFailExMock).when(natAPIManMock).getAllVirtualMachines(hostMachine);
         //there should be returned a non-empty string value
         when(conFailExMock.getMessage()).thenReturn("Any error message");
 
@@ -692,7 +698,7 @@ public class VirtualizationToolManagerImplTest {
                 + "connection problem", errContent.toString().isEmpty());
         assertTrue("The list of virtual machines should be empty", actVMs.isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
-        verify(conManMocked).disconnectFrom(hostMachine);
+        verify(conManMock).disconnectFrom(hostMachine);
     }
 
     /**
@@ -706,7 +712,7 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine vm = new VMBuilder().build();
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
 
         sut.removeVirtualMachine(vm);
 
@@ -732,9 +738,9 @@ public class VirtualizationToolManagerImplTest {
         assertFalse("There should be a message on a standard error output that there was made an attempt "
                 + "to remove a null virtual machine", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIManager::removeVirtualMachine() has never been called
-        verify(natAPIManMocked, never()).removeVirtualMachine(any(VirtualMachine.class));
+        verify(natAPIManMock, never()).removeVirtualMachine(any(VirtualMachine.class));
         //checks the method ConnectionManager::isConnected() has never been called
-        verify(conManMocked, never()).isConnected(hostMachine);
+        verify(conManMock, never()).isConnected(hostMachine);
     }
 
     /**
@@ -782,9 +788,9 @@ public class VirtualizationToolManagerImplTest {
                 + "has a different physical machine from physical machine of virtualizationToolManager",
                 errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIManager::removeVirtualMachine() has never been called
-        verify(natAPIManMocked, never()).removeVirtualMachine(any(VirtualMachine.class));
+        verify(natAPIManMock, never()).removeVirtualMachine(any(VirtualMachine.class));
         //checks the method ConnectionManager::isConnected() has never been called
-        verify(conManMocked, never()).isConnected(hostMachine);
+        verify(conManMock, never()).isConnected(hostMachine);
     }
 
     /**
@@ -848,12 +854,12 @@ public class VirtualizationToolManagerImplTest {
         UnknownVirtualMachineException unVirtMachExMock = mock(UnknownVirtualMachineException.class);
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be thrown UnknownVirtualMachineException exception when the method
         //NativeVBoxAPIManager::removeVirtualMachine() is called with the required virtual machine
         //and means the virtual machine cannot be removed, because it does not exist on a particular
         //physical machine
-        doThrow(unVirtMachExMock).when(natAPIManMocked).removeVirtualMachine(vm);
+        doThrow(unVirtMachExMock).when(natAPIManMock).removeVirtualMachine(vm);
         //there should be returned a non-empty string value
         when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
 
@@ -878,11 +884,11 @@ public class VirtualizationToolManagerImplTest {
         UnexpectedVMStateException unexVMStateMock = mock(UnexpectedVMStateException.class);
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
        //there should be thrown UnexpectedVMStateException exception when the method
         //NativeVBoxAPIManager::removeVirtualMachine() is called with the required virtual machine
         //and means the virtual machine cannot be removed, because it is not in a required state for removing
-        doThrow(unexVMStateMock).when(natAPIManMocked).removeVirtualMachine(vm);
+        doThrow(unexVMStateMock).when(natAPIManMock).removeVirtualMachine(vm);
         //there should be returned a non-empty string value
         when(unexVMStateMock.getMessage()).thenReturn("Any error message");
 
@@ -905,7 +911,7 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine vm = new VMBuilder().build();
 
         //means that the hostMachine is not connected and so there cannot be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(false);
+        when(conManMock.isConnected(hostMachine)).thenReturn(false);
 
         sut.removeVirtualMachine(vm);
 
@@ -913,7 +919,7 @@ public class VirtualizationToolManagerImplTest {
         assertFalse("There should be a message on a standard error output that the virtual machine "
                 + "has an empty ID", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIManager::removeVirtualMachine() has never been called
-        verify(natAPIManMocked, never()).removeVirtualMachine(any(VirtualMachine.class));
+        verify(natAPIManMock, never()).removeVirtualMachine(any(VirtualMachine.class));
     }
 
     /**
@@ -933,11 +939,11 @@ public class VirtualizationToolManagerImplTest {
         ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
 
         //means that the hostMachine is connected and so there can be done a work with it
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be thrown a ConnectionFailureException exception when the method
         //NativeVBoxAPIManager::removeVirtualMachine() is called and means there occured any connection problem
         //when there was being worked with VirtualBox on the host machine
-        doThrow(conFailExMock).when(natAPIManMocked).removeVirtualMachine(vm);
+        doThrow(conFailExMock).when(natAPIManMock).removeVirtualMachine(vm);
         //there should be returned a non-empty string value
         when(conFailExMock.getMessage()).thenReturn("Any error message");
 
@@ -946,7 +952,7 @@ public class VirtualizationToolManagerImplTest {
         assertFalse("There should be a message on a standard error output that there occured any"
                 + "connection problem", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
-        verify(conManMocked).disconnectFrom(hostMachine);
+        verify(conManMock).disconnectFrom(hostMachine);
     }
 
     /**
@@ -966,10 +972,10 @@ public class VirtualizationToolManagerImplTest {
                 .build();
 
         //means that the host machine of virtual machine is connected and the cloning operation can start
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be returned expVMClone object when the method NativeVBoxAPIManager::createVirtualMachineClone()
         //is called with a required virtual machine
-        when(natAPIManMocked.createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES)).thenReturn(expVMClone);
+        when(natAPIManMock.createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES)).thenReturn(expVMClone);
 
         VirtualMachine actVMClone = sut.cloneVirtualMachine(origVM, CloneType.FULL_FROM_ALL_STATES);
 
@@ -999,9 +1005,9 @@ public class VirtualizationToolManagerImplTest {
                 + "to clone a null virtual machine", errContent.toString().isEmpty());
         assertNull("Returned virtual machine clone should be null", actVMClone);
         //checks the method ConnectionManager::isConnected() has never been called
-        verify(conManMocked, never()).isConnected(any(PhysicalMachine.class));
+        verify(conManMock, never()).isConnected(any(PhysicalMachine.class));
         //checks the method NativeVBoxAPIManager::createVirtualMachineClone() has never been called
-        verify(natAPIManMocked, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
+        verify(natAPIManMock, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
     }
 
     /**
@@ -1054,9 +1060,9 @@ public class VirtualizationToolManagerImplTest {
                 + "to clone a virtual machine with an incorrect host machine", errContent.toString().isEmpty());
         assertNull("Returned virtual machine clone should be null", actVMClone);
         //checks the method ConnectionManager::isConnected() has never been called
-        verify(conManMocked, never()).isConnected(any(PhysicalMachine.class));
+        verify(conManMock, never()).isConnected(any(PhysicalMachine.class));
         //checks the method NativeVBoxAPIManager::createVirtualMachineClone() has never been called
-        verify(natAPIManMocked, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
+        verify(natAPIManMock, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
     }
 
     /**
@@ -1080,9 +1086,9 @@ public class VirtualizationToolManagerImplTest {
                 + "to clone a virtual machine with a null clone type", errContent.toString().isEmpty());
         assertNull("Returned virtual machine clone should be null", actVMClone);
         //checks the method ConnectionManager::isConnected() has never been called
-        verify(conManMocked, never()).isConnected(any(PhysicalMachine.class));
+        verify(conManMock, never()).isConnected(any(PhysicalMachine.class));
         //checks the method NativeVBoxAPIManager::createVirtualMachineClone() has never been called
-        verify(natAPIManMocked, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
+        verify(natAPIManMock, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
 
     }
 
@@ -1109,7 +1115,7 @@ public class VirtualizationToolManagerImplTest {
         VirtualMachine origVM = new VMBuilder().build();
 
         //means that the hostMachine is not connected and therefore the virtual machine cannot be cloned
-        when(conManMocked.isConnected(hostMachine)).thenReturn(false);
+        when(conManMock.isConnected(hostMachine)).thenReturn(false);
 
         VirtualMachine actVMClone = sut.cloneVirtualMachine(origVM, CloneType.FULL_FROM_ALL_STATES);
 
@@ -1117,7 +1123,7 @@ public class VirtualizationToolManagerImplTest {
         assertFalse("There should be a message on a standard error output that the virtual machine"
                 + "cannot be cloned, because the host machine is disconnect", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIManager::createVirtualMachineClone has never been called
-        verify(natAPIManMocked, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
+        verify(natAPIManMock, never()).createVMClone(any(VirtualMachine.class), any(CloneType.class));
     }
 
     /**
@@ -1137,11 +1143,11 @@ public class VirtualizationToolManagerImplTest {
         UnknownVirtualMachineException unVirtMachExMock = mock(UnknownVirtualMachineException.class);
 
         //means that the host machine is connected and therefore the virtual machine can be cloned
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be thrown UnknownVirtualMachineException exception when the method
         //NativeVBoxAPIManager::createVirtualMachineClone() is called with a required virtual machine
         //and means the virtual machine does not exist and cannot be cloned
-        doThrow(unVirtMachExMock).when(natAPIManMocked).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
+        doThrow(unVirtMachExMock).when(natAPIManMock).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
         //there should be returned a non-empty string value
         when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
 
@@ -1170,11 +1176,11 @@ public class VirtualizationToolManagerImplTest {
         UnexpectedVMStateException unexVMStateMock = mock(UnexpectedVMStateException.class);
 
         //means that the host machine is connected and therefore the virtual machine can be cloned
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be thrown UnexpectedVMStateException exception when the method
         //NativeVBoxAPIManager::createVirtualMachineClone() is called with a required virtual machine
         //and means the virtual machine is not accessible and cannot be cloned
-        doThrow(unexVMStateMock).when(natAPIManMocked).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
+        doThrow(unexVMStateMock).when(natAPIManMock).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
         //there should be returned a non-empty string value
         when(unexVMStateMock.getMessage()).thenReturn("Any error message");
         
@@ -1203,11 +1209,11 @@ public class VirtualizationToolManagerImplTest {
         UnexpectedVMStateException unexVMStateMock = mock(UnexpectedVMStateException.class);
 
         //means that the host machine is connected and therefore the virtual machine can be cloned
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be thrown UnexpectedVMStateException exception when the method
         //NativeVBoxAPIManager::createVirtualMachineClone() is called with a required virtual machine
         //and means the virtual machine is not in a required state for cloning and cannot be cloned
-        doThrow(unexVMStateMock).when(natAPIManMocked).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
+        doThrow(unexVMStateMock).when(natAPIManMock).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
         //there should be returned a non-empty string value
         when(unexVMStateMock.getMessage()).thenReturn("Any error message");
         
@@ -1237,11 +1243,11 @@ public class VirtualizationToolManagerImplTest {
         ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
 
         //means that the hostMachine is connected and therefore the virtual machine can be cloned
-        when(conManMocked.isConnected(hostMachine)).thenReturn(true);
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
         //there should be thrown ConnectionFailureException exception when the method
         //NativeVBoxAPIManager::createVirtualMachineClone() is called and means there
         //occured any connection problem when there was being worked with VirtualBox on the host machine
-        doThrow(conFailExMock).when(natAPIManMocked).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
+        doThrow(conFailExMock).when(natAPIManMock).createVMClone(origVM, CloneType.FULL_FROM_ALL_STATES);
         //there should be returned a non-empty string value
         when(conFailExMock.getMessage()).thenReturn("Any error message");
 
@@ -1251,8 +1257,221 @@ public class VirtualizationToolManagerImplTest {
                 + "connection problem", errContent.toString().isEmpty());
         assertNull("Returned virtual machine clone should be null", actVMClone);
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
-        verify(conManMocked).disconnectFrom(hostMachine);
+        verify(conManMock).disconnectFrom(hostMachine);
     }
+    
+    /**
+     * This test tests that if the method VirtualizationToolManagerImpl::close()
+     * is called and no error occurs during its execution, then all running
+     * virtual machines will be shut down.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeWithNonemptyVMsListAndSomeRunningVM() throws Exception {
+        VirtualMachine vm1 = new VMBuilder().build();
+        VirtualMachine vm2 = new VMBuilder().name("VirtualMachine_02")
+                                            .id(UUID.fromString("002d084a-0189-4a55-9ab7-531c455570a1"))
+                                            .build();
+        List<VirtualMachine> vms = Arrays.asList(vm1,vm2);
+        
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
+        when(natAPIManMock.getAllVirtualMachines(hostMachine)).thenReturn(vms);
+        when(natAPIMachMock.getVMState(vm1)).thenReturn("PoweredOff");
+        when(natAPIMachMock.getVMState(vm2)).thenReturn("Running");
+        
+        sut.close();
+        
+        assertFalse("There should be a message on an output stream that the closing operation "
+                + "is being performed and that it finished successfully", outContent.toString().isEmpty());
+        assertTrue("There should not be any error message on an error output stream", errContent.toString().isEmpty());
+        verify(natAPIMachMock, never()).shutDownVM(vm1);
+        verify(natAPIMachMock).shutDownVM(vm2);
+    }
+    
+    /**
+     * This test tests that if the method VirtualizationToolManagerImpl::close()
+     * is called and no error occurs during its execution, then all virtual
+     * machines are checked if they are running, but because there is no running
+     * VM, there should not be performed any further action.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeWithNonemptyVMsListAndNoRunningVM() throws Exception {
+        VirtualMachine vm1 = new VMBuilder().build();
+        VirtualMachine vm2 = new VMBuilder().name("VirtualMachine_02")
+                                            .id(UUID.fromString("002d084a-0189-4a55-9ab7-531c455570a1"))
+                                            .build();
+        List<VirtualMachine> vms = Arrays.asList(vm1,vm2);
+        
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
+        when(natAPIManMock.getAllVirtualMachines(hostMachine)).thenReturn(vms);
+        when(natAPIMachMock.getVMState(vm1)).thenReturn("PoweredOff");
+        when(natAPIMachMock.getVMState(vm2)).thenReturn("Saved");        
+        
+        sut.close();
+        
+        assertFalse("There should be a message on an output stream that the closing operation "
+                + "is being performed and that it finished successfully", outContent.toString().isEmpty());
+        assertTrue("There should not be any error message on an error output stream", errContent.toString().isEmpty());
+        verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
+    }
+    
+    /**
+     * This test tests that if the method VirtualizationToolManagerImpl::close()
+     * is called for physical machine on which there are not virtual machines
+     * then the closing operation is successfully finished.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeWithEmptyVMsList() throws Exception {
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
+        when(natAPIManMock.getAllVirtualMachines(hostMachine)).thenReturn(new ArrayList<>());
+        
+        sut.close();
+        
+        assertFalse("There should be a message on an output stream that the closing operation "
+                + "is being performed and that it finished successfully", outContent.toString().isEmpty());
+        assertTrue("There should not be any error message on an error output stream", errContent.toString().isEmpty());
+        verify(natAPIMachMock, never()).getVMState(any(VirtualMachine.class));
+        verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
+    }
+    
+    /**
+     * This test tests that if the method VirtualizationToolManagerImpl::close()
+     * is called when its related host machine is not connected, then the closing
+     * operation is stopped and on an error output stream there should appear an
+     * error informing message.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeOnDisconnectedPhysicalMachine() throws Exception {
+        when(conManMock.isConnected(hostMachine)).thenReturn(false);
+        
+        sut.close();
+        
+        assertTrue("There should not be a message on an output stream", outContent.toString().isEmpty());
+        assertFalse("There should be an error message on an error output stream that there "
+                + "was made an attempt to stop working with VMs on physical machine which is not connected",
+                errContent.toString().isEmpty());
+        verify(natAPIManMock, never()).getAllVirtualMachines(hostMachine);
+        verify(natAPIMachMock, never()).getVMState(any(VirtualMachine.class));
+        verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
+    }
+    
+    /**
+     * This test tests that if there occurs any connection problem while all
+     * virtual machines are being retrieved during closing operation, then the
+     * closing operation is stopped and on an error output stream there appears
+     * an error informing message.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeWithSuddenConnectionLossDuringAllVMsRetrieveOperation() throws Exception {
+        ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
+        
+        when(conManMock.isConnected(hostMachine)).thenReturn(true, true, false);
+        doThrow(conFailExMock).when(natAPIManMock).getAllVirtualMachines(hostMachine);
+        when(conFailExMock.getMessage()).thenReturn("Connection operation failure: ...");
+        
+        sut.close();
+        
+        assertFalse("There should be an error message on an error output stream", errContent.toString().isEmpty());
+        verify(conManMock).disconnectFrom(hostMachine);
+        verify(natAPIMachMock, never()).getVMState(any(VirtualMachine.class));
+        verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
+    }
+    
+    /**
+     * This test tests that if there occurs any problem (VirtualBox problem) while all
+     * virtual machines are being retrieved during closing operation, then the
+     * closing operation is stopped and on an error output stream there appears
+     * an error informing message.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeWithVirtualBoxErrorDuringAllVMsRetrieveOperation() throws Exception {
+        UnknownVirtualMachineException unVirtMachExMock = mock(UnknownVirtualMachineException.class);
+        
+        when(conManMock.isConnected(hostMachine)).thenReturn(true);
+        doThrow(unVirtMachExMock).when(natAPIManMock).getAllVirtualMachines(hostMachine);
+        when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
+        
+        sut.close();
+        
+        assertFalse("There should be any error message on an error output stream", errContent.toString().isEmpty());
+        verify(natAPIMachMock, never()).getVMState(any(VirtualMachine.class));
+        verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
+    }
+    
+    /**
+     * This test tests that if there occurs any connection problem while there
+     * is being found out a state of a virtual machine during the closing operation,
+     * then the closing operation is stopped and on an error output stream there
+     * appears an error informing message.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeWithSuddenConnectionLossDuringVMStateRetrieveOperation() throws Exception {
+        VirtualMachine vm1 = new VMBuilder().build();
+        VirtualMachine vm2 = new VMBuilder().name("VirtualMachine_02")
+                                            .id(UUID.fromString("002d084a-0189-4a55-9ab7-531c455570a1"))
+                                            .build();
+        List<VirtualMachine> vms = Arrays.asList(vm1,vm2);
+        ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
+        
+        when(conManMock.isConnected(hostMachine)).thenReturn(true, true, true, false);
+        when(natAPIManMock.getAllVirtualMachines(hostMachine)).thenReturn(vms);
+        doThrow(conFailExMock).when(natAPIMachMock).getVMState(vm1);
+        when(conFailExMock.getMessage()).thenReturn("Connection operation failure: ...");
+        
+        sut.close();
+        
+        assertFalse("There should be any error message on an error output stream", errContent.toString().isEmpty());
+        verify(conManMock).disconnectFrom(hostMachine);
+        verify(natAPIMachMock, never()).getVMState(vm2);
+        verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
+    }
+    
+    /**
+     * This test tests that if there occurs any connection problem while some
+     * some virtual machine is being shut down during the closing operation, then
+     * the closing operation is stopped and on an error output stream there appears
+     * an error informing message.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void closeWithSuddenConnectionLossDuringVMShutdownOperation() throws Exception {
+        VirtualMachine vm1 = new VMBuilder().build();
+        VirtualMachine vm2 = new VMBuilder().name("VirtualMachine_02")
+                                            .id(UUID.fromString("002d084a-0189-4a55-9ab7-531c455570a1"))
+                                            .build();
+        List<VirtualMachine> vms = Arrays.asList(vm1,vm2);
+        ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
+        
+        when(conManMock.isConnected(hostMachine)).thenReturn(true, true, true, true, true, true, false);
+        when(natAPIManMock.getAllVirtualMachines(hostMachine)).thenReturn(vms);
+        when(natAPIMachMock.getVMState(vm1)).thenReturn("Running");
+        when(natAPIMachMock.getVMState(vm2)).thenReturn("Running");
+        doThrow(conFailExMock).when(natAPIMachMock).getVMState(vm2);
+        when(conFailExMock.getMessage()).thenReturn("Connection operation failure: ...");
+        
+        sut.close();
+        
+        assertFalse("There should be any error message on an error output stream", errContent.toString().isEmpty());        
+        verify(natAPIMachMock).shutDownVM(vm1);
+        verify(conManMock).disconnectFrom(hostMachine);
+        verify(natAPIMachMock, never()).shutDownVM(vm2);
+    }
+    
+    
 
     /**
      * Class Builder for easier and faster creating and setting up new object of

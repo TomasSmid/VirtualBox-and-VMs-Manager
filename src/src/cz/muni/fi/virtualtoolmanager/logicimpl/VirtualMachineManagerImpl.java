@@ -478,7 +478,7 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
             //parts[0] = name of rule, parts[1] = protocol, parts[2] = host IP address,
             //parts[3] = host port number, parts[4] = guest IP address, parts[5] = guest port number                        
             String name = parts[0];
-            ProtocolType protocol = ProtocolType.valueOf(parts[1]);
+            ProtocolType protocol = (parts[1].equals("TCP") ? ProtocolType.TCP : ProtocolType.UDP);
             String hostIP = parts[2];
             int hostPort = Integer.parseInt(parts[3]);
             String guestIP = parts[4];
