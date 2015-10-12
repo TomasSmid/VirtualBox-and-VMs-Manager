@@ -67,12 +67,17 @@ public final class SearchCriteria {
             return this;
         }
         
+        public Builder cpuExecutionCap(Long value){
+            this.cpuExecutionCap = value;
+            return this;
+        }
+        
         public Builder hardDiskFreeSpaceSize(Long value){
             hardDiskFreeSpaceSize = value;
             return this;
         }
         
-        public Builder hardDiskTotakSize(Long value){
+        public Builder hardDiskTotalSize(Long value){
             hardDiskTotalSize = value;
             return this;
         }

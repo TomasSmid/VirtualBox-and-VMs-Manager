@@ -20,6 +20,6 @@ package cz.muni.fi.virtualtoolmanager.pubapi.types;
  * @author Tomáš Šmíd
  */
 public enum SearchMode {
-    PRECISE,
+    ABSOLUTE_EQUALITY,
     TOLERANT
 }

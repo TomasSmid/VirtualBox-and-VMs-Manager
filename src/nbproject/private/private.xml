@@ -3,9 +3,9 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/Tom/Documents/NetBeansProjects/BP/VirtualizationToolManager/src/cz/muni/fi/virtualtoolmanager/logicimpl/VirtualizationToolManagerImpl.java</file>
-            <file>file:/C:/Users/Tom/Documents/NetBeansProjects/BP/VirtualizationToolManager/test/cz/muni/fi/virtualtoolmanager/logicimpl/VirtualizationToolManagerImplTest.java</file>
-            <file>file:/C:/Users/Tom/Documents/NetBeansProjects/BP/VirtualizationToolManager/src/cz/muni/fi/virtualtoolmanager/logicimpl/ConnectionManagerImpl.java</file>
+            <file>file:/C:/Users/Tom/Documents/NetBeansProjects/BP/VirtualizationToolManager/src/cz/muni/fi/virtualtoolmanager/logicimpl/SearchManagerImpl.java</file>
+            <file>file:/C:/Users/Tom/Documents/NetBeansProjects/BP/VirtualizationToolManager/src/cz/muni/fi/virtualtoolmanager/pubapi/entities/SearchCriteria.java</file>
+            <file>file:/C:/Users/Tom/Documents/NetBeansProjects/BP/VirtualizationToolManager/test/cz/muni/fi/virtualtoolmanager/logicimpl/SearchManagerImplTest.java</file>
         </group>
     </open-files>
 </project-private>
