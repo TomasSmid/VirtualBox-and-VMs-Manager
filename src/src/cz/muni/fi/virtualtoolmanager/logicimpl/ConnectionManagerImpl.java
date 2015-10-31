@@ -20,6 +20,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureExceptio
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
+import cz.muni.fi.virtualtoolmanager.pubapi.types.ClosingActionType;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
@@ -32,40 +33,21 @@ public class ConnectionManagerImpl implements ConnectionManager{
 
     @Override
     public VirtualizationToolManager connectTo(PhysicalMachine physicalMachine){
-        OutputHandler outputHandler = new OutputHandler();
-        
-        if(physicalMachine == null){
-            outputHandler.printErrorMessage("Connection operation failure: There "
-                    + "was made an attempt to connect to a null physical machine.");
-            return null;
-        }
-        
-        if(isConnected(physicalMachine)){
-            outputHandler.printMessage("Physical machine " + physicalMachine
-                    + " is already connected.");            
-            
-            return new VirtualizationToolManagerImpl(physicalMachine);
-        }
-        
-        outputHandler.printMessage("Connecting to the physical machine " + physicalMachine);
-        
-        try{
-            establishConnection(physicalMachine);
-        }catch(ConnectionFailureException | IncompatibleVirtToolAPIVersionException ex){
-            outputHandler.printErrorMessage(ex.getMessage());
-            return null;
-        }
-        
-        ConnectedPhysicalMachines connectedPhysicalMachines = ConnectedPhysicalMachines.getInstance();
-        connectedPhysicalMachines.add(physicalMachine);
-        outputHandler.printMessage("Physical machine " + physicalMachine + " has "
-                + "been connected successfully");
-        
-        return new VirtualizationToolManagerImpl(physicalMachine);        
+        return connectTo(physicalMachine,2000l);
+    }
+    
+    @Override
+    public VirtualizationToolManager connectTo(PhysicalMachine physicalMachine, long millis){
+        return connectTo(physicalMachine,millis,true);
+    }
+    
+    @Override
+    public void disconnectFrom(PhysicalMachine physicalMachine){
+        disconnectFrom(physicalMachine, ClosingActionType.NONE);
     }
 
     @Override
-    public void disconnectFrom(PhysicalMachine physicalMachine) {
+    public void disconnectFrom(PhysicalMachine physicalMachine, ClosingActionType closingAction) {
         OutputHandler outputHandler = new OutputHandler();
         
         if(physicalMachine == null){
@@ -85,36 +67,48 @@ public class ConnectionManagerImpl implements ConnectionManager{
         
         outputHandler.printMessage("Disconnecting from the physical machine " + physicalMachine);
         
-        //preserve the original output streams and then set up new streams
-        PrintStream origOutStream = OutputHandler.getOutputStream();
-        PrintStream origErrStream = OutputHandler.getErrorOutputStream();
-        //output stream set up to null - no info messages are required on watched output stream
-        //error output stream set up to auxilliary stream - no error messages are required on
-        //watched error output stream, but the error message will be needed if there appears 
-        //an error while the method this::connectTo() is being processed
-        final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        setOutputStreams(null, new PrintStream(errContent));
-        
-        //check the connection with the physical machine is ok and get the virt. tool manager
-        VirtualizationToolManager virtualizationToolManager = connectTo(physicalMachine);
-        if(virtualizationToolManager == null){
-            //set up output streams back to the standard output stream and standard error output stream
-            setOutputStreams(origOutStream, origErrStream);
-            outputHandler.printErrorMessage("Disconnection operation failure: "
-                    + "There could not be stopped the work with virtual machines "
-                    + "properly, " + getReasonOfDisconnectionFailure(errContent.toString()));
-            removePMFromListOfConnectedPMs(physicalMachine);
-            outputHandler.printMessage("Physical machine " + physicalMachine + " was disconnected");
-            return;
+        switch(closingAction){
+            case NONE:{
+                removePMFromListOfConnectedPMs(physicalMachine);                
+                break;
+            }
+            case SHUT_DOWN_RUNNING_VM:{
+                //preserve the original output streams and then set up new streams
+                PrintStream origOutStream = OutputHandler.getOutputStream();
+                PrintStream origErrStream = OutputHandler.getErrorOutputStream();
+                //output stream set up to null - no info messages are required on watched output stream
+                //error output stream set up to auxilliary stream - no error messages are required on
+                //watched error output stream, but the error message will be needed if there appears 
+                //an error while the method this::connectTo() is being processed
+                final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+                setOutputStreams(null, new PrintStream(errContent));
+
+                //check the connection with the physical machine is ok and get the virt. tool manager
+                VirtualizationToolManager virtualizationToolManager = connectTo(physicalMachine,-1,false);
+                if(virtualizationToolManager == null){
+                    //set up output streams back to the standard output stream and standard error output stream
+                    setOutputStreams(origOutStream, origErrStream);
+                    outputHandler.printErrorMessage("Disconnection operation failure: "
+                            + "There could not be stopped the work with virtual machines "
+                            + "properly, " + getReasonOfDisconnectionFailure(errContent.toString()));
+                    removePMFromListOfConnectedPMs(physicalMachine);
+                    outputHandler.printMessage("Physical machine " + physicalMachine + " was disconnected");
+                    return;
+                }
+
+                //set up output streams back to the standard output stream and standard error output stream for
+                //information provision while the work with virtual machines is being stopped
+                setOutputStreams(origOutStream, origErrStream);
+                //stop working with all virtual machines from the physical machine and shut the running
+                //virtual machines down
+                virtualizationToolManager.close();
+                removePMFromListOfConnectedPMs(physicalMachine);
+                break;
+            }
+            default: throw new IllegalArgumentException("Illegal enumeration literal of type "
+                    + "ClosingActionType occured while trying to disconnect from " + physicalMachine);
         }
         
-        //set up output streams back to the standard output stream and standard error output stream for
-        //information provision while the work with virtual machines is being stopped
-        setOutputStreams(origOutStream, origErrStream);
-        //stop working with all virtual machines from the physical machine and shut the running
-        //virtual machines down
-        virtualizationToolManager.close();
-        removePMFromListOfConnectedPMs(physicalMachine);
         outputHandler.printMessage("Physical machine " + physicalMachine + " was disconnected");
     }
 
@@ -140,16 +134,9 @@ public class ConnectionManagerImpl implements ConnectionManager{
     
     @Override
     public void close() {
-        //List<PhysicalMachine> allConnectedPhysicalMachines = getConnectedPhysicalMachines();
-        
-        /*if(!allConnectedPhysicalMachines.isEmpty()){
-            for(PhysicalMachine connectedPM : allConnectedPhysicalMachines){
-                disconnectFrom(connectedPM);
-            }
-        }*/
         while(!getConnectedPhysicalMachines().isEmpty()){
             
-            disconnectFrom(getConnectedPhysicalMachines().get(0));
+            disconnectFrom(getConnectedPhysicalMachines().get(0), ClosingActionType.SHUT_DOWN_RUNNING_VM);
         }
     }
     
@@ -162,11 +149,52 @@ public class ConnectionManagerImpl implements ConnectionManager{
         OutputHandler.setErrorOutputStream(stdErrOutput);        
     }
     
-    private void establishConnection(PhysicalMachine physicalMachine) throws ConnectionFailureException,
-                                                                             IncompatibleVirtToolAPIVersionException{
+    private VirtualizationToolManager connectTo(PhysicalMachine physicalMachine, long millis,
+                                                boolean doStandardConnection){
+        OutputHandler outputHandler = new OutputHandler();
+        
+        if(physicalMachine == null){
+            outputHandler.printErrorMessage("Connection operation failure: There "
+                    + "was made an attempt to connect to a null physical machine.");
+            return null;
+        }
+        
+        if(millis < -1){
+            millis = -1l;
+        }
+        
+        if(doStandardConnection){
+            if(isConnected(physicalMachine)){
+                outputHandler.printMessage("Physical machine " + physicalMachine
+                        + " is already connected.");            
+
+                return new VirtualizationToolManagerImpl(physicalMachine);
+            }
+        }
+        
+        outputHandler.printMessage("Connecting to the physical machine " + physicalMachine);
+        
+        try{
+            establishConnection(physicalMachine, millis);
+        }catch(ConnectionFailureException | IncompatibleVirtToolAPIVersionException ex){
+            outputHandler.printErrorMessage(ex.getMessage());
+            return null;
+        }
+        
+        if(doStandardConnection){
+            ConnectedPhysicalMachines connectedPhysicalMachines = ConnectedPhysicalMachines.getInstance();
+            connectedPhysicalMachines.add(physicalMachine);
+        }
+        outputHandler.printMessage("Physical machine " + physicalMachine + " has "
+                + "been connected successfully");
+        
+        return new VirtualizationToolManagerImpl(physicalMachine);        
+    }
+    
+    private void establishConnection(PhysicalMachine physicalMachine, long millis) throws ConnectionFailureException,
+                                                                                          IncompatibleVirtToolAPIVersionException{
         //number of attempts for connection establishment, max. number of attempts is 3
-        int attempt = 1;
-        long MAX_WAIT_TIME = 2000l;
+        int attempt = (millis == -1 ? 3 : 1);        
         NativeVBoxAPIConnection nativeVBoxAPIConnection = new NativeVBoxAPIConnection();
         
         //max. 3 attempts to try to connect to the physical machine
@@ -178,10 +206,13 @@ public class ConnectionManagerImpl implements ConnectionManager{
                 ++attempt;
                 if(attempt >= 4){
                     throw ex;
-                }else{                    
-                    long endTime = System.currentTimeMillis() + MAX_WAIT_TIME;
+                }else{
+                    //set the end time, to which the system current time must get to stop looping,
+                    //with parameter millis which represents max wait time for pause between each
+                    //connection establishment attempt
+                    long endTime = System.currentTimeMillis() + millis;
                     while(System.currentTimeMillis() < endTime){
-                        //loop about 2 seconds
+                        //loop about millis/1000 seconds
                     }
                 }             
             }catch(IncompatibleVirtToolAPIVersionException ex){

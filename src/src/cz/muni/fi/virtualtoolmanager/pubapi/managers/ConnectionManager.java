@@ -16,6 +16,7 @@
 package cz.muni.fi.virtualtoolmanager.pubapi.managers;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
+import cz.muni.fi.virtualtoolmanager.pubapi.types.ClosingActionType;
 import java.util.List;
 
 /**
@@ -26,7 +27,11 @@ public interface ConnectionManager {
     
     public VirtualizationToolManager connectTo(PhysicalMachine physicalMachine);
     
+    public VirtualizationToolManager connectTo(PhysicalMachine physicalMachine, long millis);
+    
     public void disconnectFrom(PhysicalMachine physicalMachine);
+    
+    public void disconnectFrom(PhysicalMachine physicalMachine, ClosingActionType closingAction);
     
     public boolean isConnected(PhysicalMachine physicalMachine);
     

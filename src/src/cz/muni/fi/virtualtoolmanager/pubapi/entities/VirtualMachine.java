@@ -41,15 +41,15 @@ public final class VirtualMachine implements Comparable<VirtualMachine>{
         private final UUID id;
         private final String name;
         private final PhysicalMachine hostMachine;
-        private Long countOfCPU = 0L;
-        private Long countOfMonitors = 0L;
-        private Long cpuExecutionCap = 0L;
-        private Long hardDiskFreeSpaceSize = 0L;
-        private Long hardDiskTotalSize = 0L;
-        private Long sizeOfRAM = 0L;
-        private Long sizeOfVRAM = 0L;
-        private String typeOfOS = "Unknown";
-        private String identifierOfOS = "Unknown";
+        private Long countOfCPU = null;
+        private Long countOfMonitors = null;
+        private Long cpuExecutionCap = null;
+        private Long hardDiskFreeSpaceSize = null;
+        private Long hardDiskTotalSize = null;
+        private Long sizeOfRAM = null;
+        private Long sizeOfVRAM = null;
+        private String typeOfOS = null;
+        private String identifierOfOS = null;
         
         public Builder(UUID id, String vmName, PhysicalMachine hostMachine){
             if(id == null || id.toString().trim().isEmpty()){

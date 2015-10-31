@@ -28,8 +28,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -66,8 +64,12 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return;
         }catch(ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + virtualMachine.getHostMachine()
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            outputHandler.printErrorMessage(ex.getMessage());
+            
             return;
         }
         
@@ -103,8 +105,11 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return;
         }catch(ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + virtualMachine.getHostMachine()
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            outputHandler.printErrorMessage(ex.getMessage());
             return;
         }
         
@@ -146,8 +151,11 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return;
         } catch (ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + virtualMachine.getHostMachine()
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            outputHandler.printErrorMessage(ex.getMessage());
             return;
         }
         
@@ -203,8 +211,11 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return;
         }catch(ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + virtualMachine.getHostMachine()
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            outputHandler.printErrorMessage(ex.getMessage());
             return;
         }
         
@@ -290,8 +301,11 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return new ArrayList<>();
         } catch (ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + virtualMachine.getHostMachine()
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            outputHandler.printErrorMessage(ex.getMessage());
             return new ArrayList<>();
         }
         
@@ -330,8 +344,11 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return null;
         }catch(ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + virtualMachine.getHostMachine()
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            outputHandler.printErrorMessage(ex.getMessage());
             return null;
         }
         
@@ -452,7 +469,7 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
         OutputHandler outputHandler = new OutputHandler();
         
         if(!strErrContent.trim().isEmpty()){
-            if(strErrContent.startsWith("Connection operation failure")){
+            if(strErrContent.contains("Connection operation failure")){
                 outputHandler.printErrorMessage(messages[0]);
                 return false;
 

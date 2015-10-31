@@ -97,8 +97,17 @@ class NativeVBoxAPIMachine {
                 virtualBoxManager.waitForEvents(0l);
                 progress.waitForCompletion(200);
             }
-            while(vboxMachine.getState() != MachineState.Running){
-                //just loop until that is true
+            //check the starting operation has been finished successfully
+            if(progress.getResultCode() == 0){
+                while(vboxMachine.getState() != MachineState.Running){
+                    //just loop until the condition is true
+                } 
+            }else{                
+                //operation was not finished successfully, unlock machine and do the clean up after performed operation(s)
+                //session.unlockMachine();                
+                virtualBoxManager.disconnect();
+                virtualBoxManager.cleanup();
+                throw new UnexpectedVMStateException(getErrorMessage(4, virtualMachine));               
             }
         }catch(VBoxException ex){
             //just do the clean up after performed operation(s)
@@ -106,7 +115,7 @@ class NativeVBoxAPIMachine {
             virtualBoxManager.cleanup();
             //VM cannot be started now, because there is another process which is using the VM now
             //(that process locked the VM for itself)
-            throw new UnexpectedVMStateException(getErrorMessage(4, virtualMachine));
+            throw new UnexpectedVMStateException(getErrorMessage(5, virtualMachine));
         }
         
         //operation finished successfully (VM is running now), now release the VM for another processes
@@ -129,7 +138,7 @@ class NativeVBoxAPIMachine {
                                                                  UnexpectedVMStateException {
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
-        int[] errMsgNum = {5, 6};
+        int[] errMsgNum = {6, 7};
         
         try{
             //get the required VM from VirtualBox
@@ -148,7 +157,7 @@ class NativeVBoxAPIMachine {
             //just do the clean up after performed operation(s)
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnexpectedVMStateException(getErrorMessage(7, virtualMachine)
+            throw new UnexpectedVMStateException(getErrorMessage(8, virtualMachine)
                                     + vboxMachine.getAccessError().getText());
         }
         
@@ -157,7 +166,7 @@ class NativeVBoxAPIMachine {
             case Running:
             case Paused : 
             case Stuck  : break;
-            default     : throw new UnexpectedVMStateException(getErrorMessage(8, virtualMachine));
+            default     : throw new UnexpectedVMStateException(getErrorMessage(9, virtualMachine));
         }
         
         //all conditions for VM shutdown are met - VM can be shut down
@@ -172,14 +181,32 @@ class NativeVBoxAPIMachine {
             virtualBoxManager.waitForEvents(0l);
             progress.waitForCompletion(200);
         }
-        //release the VM for another processes and wait while the VM is definitively powered down and unlocked
-        session.unlockMachine();
-        while(vboxMachine.getState() != MachineState.PoweredOff){
-            
+        
+        try{
+            //release the VM for another processes and wait while the VM is definitively powered down and unlocked
+            session.unlockMachine();
+        }catch(VBoxException ex){
+            //machine has already been unlocked -> second attempt to unlock unlocked machine invoked exception -
+            //- after powerDown() operation had finished the session unlocked machine, the call session.unlockMachine()
+            //is performed for sure in order to ensure that the machine surely would not stay locked
         }
         while(session.getState() != SessionState.Unlocked){
-            
+            //just loop until the condition is true
         }
+        
+        if(progress.getResultCode() != 0){
+            //get error info
+            String nativeAPIErrorInfo = progress.getErrorInfo().getText();
+            //operation finished successfully - do the clean up after performed operation(s)
+            virtualBoxManager.disconnect();
+            virtualBoxManager.cleanup();
+            throw new UnexpectedVMStateException(getErrorMessage(10, virtualMachine) + nativeAPIErrorInfo);
+        }
+        
+        while(vboxMachine.getState() != MachineState.PoweredOff){
+            //just loop until the condition is true
+        }
+        
         
         //operation finished successfully - do the clean up after performed operation(s)
         virtualBoxManager.disconnect();
@@ -200,7 +227,7 @@ class NativeVBoxAPIMachine {
                                                                                      UnexpectedVMStateException {
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
-        int[] errMsgNum = {9, 10};
+        int[] errMsgNum = {11, 12};
         
         try{
             //get the required VM from VirtualBox
@@ -218,7 +245,7 @@ class NativeVBoxAPIMachine {
             //just do the clean up after performed operation(s)
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnexpectedVMStateException(getErrorMessage(11, virtualMachine));
+            throw new UnexpectedVMStateException(getErrorMessage(13, virtualMachine));
         }
         
         //get the NAT engine thanks to it there will be possible to add a new port-forwarding rule to VM
@@ -243,7 +270,7 @@ class NativeVBoxAPIMachine {
                                                                                       UnexpectedVMStateException {
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
-        int[] errMsgNum = {12, 13};
+        int[] errMsgNum = {14, 15};
         
         try{
             //get the required VM from VirtualBox
@@ -261,7 +288,7 @@ class NativeVBoxAPIMachine {
             //just do the clean up after performed operation(s)
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnexpectedVMStateException(getErrorMessage(14, virtualMachine));
+            throw new UnexpectedVMStateException(getErrorMessage(16, virtualMachine));
         }
         //get NAT engine thanks to it there can be a port-forwarding rule deleted
         INATEngine natEngine = netAdapter.getNATEngine();
@@ -273,8 +300,8 @@ class NativeVBoxAPIMachine {
             //just do the clean up after performed operation(s)
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnknownPortRuleException(getErrorMessage(15, virtualMachine) + ruleName
-                                            + "Nonexistent port-forwarding rule cannot be deleted.");
+            throw new UnknownPortRuleException(getErrorMessage(17, virtualMachine) + ruleName
+                                            + ". Nonexistent port-forwarding rule cannot be deleted.");
         }
         
         //operation finished successfully - do the clean up after performed operation(s)
@@ -287,7 +314,7 @@ class NativeVBoxAPIMachine {
                                                                            UnexpectedVMStateException {
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
-        int[] errMsgNum = {16, 17};
+        int[] errMsgNum = {18, 19};
         
         try{
             //get the required VM from VirtualBox
@@ -302,7 +329,7 @@ class NativeVBoxAPIMachine {
         //get network adapter of VM and check if it is of a required type
         INetworkAdapter netAdapter = vboxMachine.getNetworkAdapter(0L);
         if(netAdapter.getAttachmentType() != NetworkAttachmentType.NAT){
-            throw new UnexpectedVMStateException(getErrorMessage(18, virtualMachine));
+            throw new UnexpectedVMStateException(getErrorMessage(20, virtualMachine));
         }
         
         //get NAT engine thanks to it there can be retrieved all port-forwarding rules from VM
@@ -322,7 +349,7 @@ class NativeVBoxAPIMachine {
                                                                    UnexpectedVMStateException{
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
-        int[] errMsgNum = {19, 20};
+        int[] errMsgNum = {21, 22};
         
         try{
             //get the required VM from VirtualBox
@@ -341,7 +368,7 @@ class NativeVBoxAPIMachine {
             //just do the clean up after performed operation(s)
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-            throw new UnexpectedVMStateException(getErrorMessage(21, virtualMachine)
+            throw new UnexpectedVMStateException(getErrorMessage(23, virtualMachine)
                                     + vboxMachine.getAccessError().getText());
         }
         
@@ -361,29 +388,31 @@ class NativeVBoxAPIMachine {
                                /* 01 */ "Virtual machine starting operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Nonexistent virtual machine cannot be started.",
                                /* 02 */ "Virtual machine starting operation failure: Virtual machine " + virtualMachine + " cannot be started, because it is not accessible -> ",
                                /* 03 */ "Virtual machine starting operation failure: Virtual machine " + virtualMachine + " cannot be started, because it is already running.",
-                               /* 04 */ "Virtual machine starting operation failure: Virtual machine " + virtualMachine + " cannot be started now, because there exists another process which is working with this virtual machine now (that process has locked the virtual machine just for itself).",
-                               /* 05 */ "Connection operation failure while trying to shut down the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                               /* 04 */ "Virtual machine starting operation failure: Failed to open the session with virtual machine " + virtualMachine + ". It can be caused by a missing or corrupted \"" + virtualMachine.getName() + ".vdi\" file or there is being performed another operation (e.g. cloning) with this virtual machine so it cannot be started now.",
+                               /* 05 */ "Virtual machine starting operation failure: Virtual machine " + virtualMachine + " cannot be started now, because there exists another process which is working with this virtual machine now (that process has locked the virtual machine just for itself).",
+                               /* 06 */ "Connection operation failure while trying to shut down the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + "server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 06 */ "Virtual machine shutdown operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Nonexistent virtual machine cannot be shut down.",
-                               /* 07 */ "Virtual machine shutdown operation failure: Virtual machine " + virtualMachine + " cannot be shut down, because it is not accessible -> ",
-                               /* 08 */ "Virtual machine shutdown operation failure: Virtual machine " + virtualMachine + " cannot be shut down, because it is not in any of the required states (\"Running\", \"Paused\", \"Stuck\") for virtual machine shutdown operation.",
-                               /* 09 */ "Connection operation failure while trying to add new port-forwarding rule to the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                               /* 07 */ "Virtual machine shutdown operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Nonexistent virtual machine cannot be shut down.",
+                               /* 08 */ "Virtual machine shutdown operation failure: Virtual machine " + virtualMachine + " cannot be shut down, because it is not accessible -> ",
+                               /* 09 */ "Virtual machine shutdown operation failure: Virtual machine " + virtualMachine + " cannot be shut down, because it is not in any of the required states (\"Running\", \"Paused\", \"Stuck\") for virtual machine shutdown operation.",
+                               /* 10 */ "Virtual machine shutdown operation failure: ", //error info from VirtualBox API should follow
+                               /* 11 */ "Connection operation failure while trying to add new port-forwarding rule to the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + "server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 10 */ "New port-forwarding rule addition operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. New port-forwarding rule cannot be added to a nonexistent virtual machine.",
-                               /* 11 */ "New port-forwarding rule addition operation failure: There cannot be added any port-forwarding rule to virtual machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT.",
-                               /* 12 */ "Connection operation failure while trying to delete port-forwarding rule from the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                               /* 12 */ "New port-forwarding rule addition operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. New port-forwarding rule cannot be added to a nonexistent virtual machine.",
+                               /* 13 */ "New port-forwarding rule addition operation failure: There cannot be added any port-forwarding rule to virtual machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT.",
+                               /* 14 */ "Connection operation failure while trying to delete port-forwarding rule from the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + "server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 13 */ "Port-forwarding rule deletion operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Port-forwarding rule cannot be deleted from a nonexistent virtual machine.",
-                               /* 14 */ "Port-forwarding rule deletion operation failure: There cannot be deleted any port-forwarding rule from virtual machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT (there cannot exist any port-forwarding rule on this virtual machine).",
-                               /* 15 */ "Port-forwarding rule deletion operation failure: On virtual machine " + virtualMachine + " there is no port-forwarding rule with name = ",
-                               /* 16 */ "Connection operation failure while trying to get all port-forwarding rules from the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                               /* 15 */ "Port-forwarding rule deletion operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Port-forwarding rule cannot be deleted from a nonexistent virtual machine.",
+                               /* 16 */ "Port-forwarding rule deletion operation failure: There cannot be deleted any port-forwarding rule from virtual machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT (there cannot exist any port-forwarding rule on this virtual machine).",
+                               /* 17 */ "Port-forwarding rule deletion operation failure: On virtual machine " + virtualMachine + " there is no port-forwarding rule with name = ",
+                               /* 18 */ "Connection operation failure while trying to get all port-forwarding rules from the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + "server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 17 */ "All port-forwarding rules retrieve operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Port-forwarding rules cannot be retrieved from a nonexistent virtual machine.",
-                               /* 18 */ "All port-forwarding rules retrieve operation failure: There cannot be retrieved port-forwarding rules from virtual machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT (there cannot exist any port-forwarding rule on this virtual machine).",
-                               /* 19 */ "Connection operation failure while trying to find out the state of the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
+                               /* 19 */ "All port-forwarding rules retrieve operation failure: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Port-forwarding rules cannot be retrieved from a nonexistent virtual machine.",
+                               /* 20 */ "All port-forwarding rules retrieve operation failure: There cannot be retrieved port-forwarding rules from virtual machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT (there cannot exist any port-forwarding rule on this virtual machine).",
+                               /* 21 */ "Connection operation failure while trying to find out the state of the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + "server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                               /* 20 */ "Virtual machine state finding out operation failures: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. There cannot be found out a state of nonexistent virtual machine.",
-                               /* 21 */ "Virtual machine state finding out operation failure: There cannot be found out the state of the virtual machine " + virtualMachine + ", because it is not accessible -> "};
+                               /* 22 */ "Virtual machine state finding out operation failures: There is no virtual machine " + virtualMachine + " on physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. There cannot be found out a state of nonexistent virtual machine.",
+                               /* 23 */ "Virtual machine state finding out operation failure: There cannot be found out the state of the virtual machine " + virtualMachine + ", because it is not accessible -> "};
         
         return errMessages[index];
     }

@@ -23,6 +23,8 @@ import cz.muni.fi.virtualtoolmanager.pubapi.managers.SearchManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.SearchCriterionType;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.SearchMode;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,14 +49,14 @@ public class SearchManagerImpl implements SearchManager{
     @Override
     public List<VirtualMachine> search(SearchCriteria searchCriteria, SearchMode mode,
                                        List<SearchCriterionType> searchOrder) {
-        ConnectionManager connectionManager = new ConnectionManagerImpl();
-        List<PhysicalMachine> connectedPMs = connectionManager.getConnectedPhysicalMachines();
+        ConnectionManager connectionManager = new ConnectionManagerImpl();        
         
-        if(connectedPMs.isEmpty() || !isSearchCriteriaValid(searchCriteria) || !isSearchModeValid(mode)){
+        if(connectionManager.getConnectedPhysicalMachines().isEmpty() ||
+                !isSearchCriteriaValid(searchCriteria) || !isSearchModeValid(mode)){
             return new ArrayList<>();
         }
         
-        List<VirtualMachine> virtualMachines = getAllAvailableVMs(connectedPMs);
+        List<VirtualMachine> virtualMachines = getAllAvailableVMs();
         if(virtualMachines.isEmpty()){
             return new ArrayList<>();
         }
@@ -176,16 +178,34 @@ public class SearchManagerImpl implements SearchManager{
         }
     }
     
-    private List<VirtualMachine> getAllAvailableVMs(List<PhysicalMachine> connectedPMs){        
+    private List<VirtualMachine> getAllAvailableVMs(){        
         List<VirtualMachine> virtualMachines = new ArrayList<>();
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        int index = 0;
+        int numOfPMs = connectionManager.getConnectedPhysicalMachines().size();
         
-        for(PhysicalMachine physicalMachine : connectedPMs){
+        /*for(PhysicalMachine physicalMachine : connectedPMs){
             VirtualizationToolManager virtualizationToolManager = new VirtualizationToolManagerImpl(physicalMachine);
             List<VirtualMachine> tempVMs = virtualizationToolManager.getVirtualMachines();
             if(!tempVMs.isEmpty()){
                 virtualMachines.addAll(tempVMs);
             }
-        }
+        }*/
+        
+        do{
+            PhysicalMachine physicalMachine = connectionManager.getConnectedPhysicalMachines().get(index);
+            VirtualizationToolManager virtualizationToolManager = new VirtualizationToolManagerImpl(physicalMachine);
+            List<VirtualMachine> tempVMs = virtualizationToolManager.getVirtualMachines();
+            if(!tempVMs.isEmpty()){
+                virtualMachines.addAll(tempVMs);
+            }
+            if(numOfPMs == connectionManager.getConnectedPhysicalMachines().size()){
+                ++index;                
+            }else{
+                numOfPMs = connectionManager.getConnectedPhysicalMachines().size();
+            }
+        }while(index < numOfPMs);
+        
         
         return virtualMachines;
     }
@@ -338,21 +358,22 @@ public class SearchManagerImpl implements SearchManager{
                     }
 
                     case CPU_COUNT:{
-                        if(virtualMachine.getCountOfCPU().equals(searchCriteria.getCountOfCPU())){
+                        if(virtualMachine.getCountOfCPU() == searchCriteria.getCountOfCPU()){
                             tempMatchedVMs.add(virtualMachine);
                         }
                         break;
                     }
 
                     case CPU_EXEC_CAP:{
-                        if(virtualMachine.getCPUExecutionCap().equals(searchCriteria.getCpuExecutionCap())){
+                        if(virtualMachine.getCPUExecutionCap() == searchCriteria.getCpuExecutionCap()){
                             tempMatchedVMs.add(virtualMachine);
                         }
                         break;
                     }
 
                     case HDD_FREE_SPACE:{
-                        long dev = (long)((searchCriteria.getHardDiskFreeSpaceSize()/(double)100)*maxDeviation);
+                        BigDecimal tempNum = new BigDecimal(String.valueOf((searchCriteria.getHardDiskFreeSpaceSize()/(double)100)*maxDeviation));
+                        long dev = tempNum.setScale(0, RoundingMode.HALF_UP).longValue();
                         if(virtualMachine.getHardDiskFreeSpaceSize() >= searchCriteria.getHardDiskFreeSpaceSize() &&
                                 virtualMachine.getHardDiskFreeSpaceSize() <= (searchCriteria.getHardDiskFreeSpaceSize() + dev)){
 
@@ -362,7 +383,8 @@ public class SearchManagerImpl implements SearchManager{
                     }
 
                     case HDD_TOTAL_SIZE:{
-                        long dev = (long)((searchCriteria.getHardDiskTotalSize()/(double)100)*maxDeviation);
+                        BigDecimal tempNum = new BigDecimal(String.valueOf((searchCriteria.getHardDiskTotalSize()/(double)100)*maxDeviation));
+                        long dev = tempNum.setScale(0, RoundingMode.HALF_UP).longValue();
                         if(virtualMachine.getHardDiskTotalSize() >= searchCriteria.getHardDiskTotalSize() &&
                                 virtualMachine.getHardDiskTotalSize() <= (searchCriteria.getHardDiskTotalSize() + dev)){
 
@@ -372,7 +394,8 @@ public class SearchManagerImpl implements SearchManager{
                     }
 
                     case RAM:{
-                        long dev = (long)((searchCriteria.getSizeOfRAM()/(double)100)*maxDeviation);
+                        BigDecimal tempNum = new BigDecimal(String.valueOf((searchCriteria.getSizeOfRAM()/(double)100)*maxDeviation));
+                        long dev = tempNum.setScale(0, RoundingMode.HALF_UP).longValue();
                         if(virtualMachine.getSizeOfRAM() >= searchCriteria.getSizeOfRAM() && 
                                 virtualMachine.getSizeOfRAM() <= (searchCriteria.getSizeOfRAM() + dev)){
 
@@ -382,7 +405,8 @@ public class SearchManagerImpl implements SearchManager{
                     }
 
                     case VRAM:{
-                        long dev = (long)((searchCriteria.getSizeOfVRAM()/(double)100)*maxDeviation);
+                        BigDecimal tempNum = new BigDecimal(String.valueOf((searchCriteria.getSizeOfVRAM()/(double)100)*maxDeviation));
+                        long dev = tempNum.setScale(0, RoundingMode.HALF_UP).longValue();
                         if(virtualMachine.getSizeOfVRAM() >= searchCriteria.getSizeOfVRAM() &&
                                 virtualMachine.getSizeOfVRAM() <= (searchCriteria.getSizeOfVRAM() + dev)){
 
@@ -392,9 +416,10 @@ public class SearchManagerImpl implements SearchManager{
                     }
 
                     case MONITOR_COUNT:{
-                        if(virtualMachine.getCountOfMonitors().equals(searchCriteria.getCountOfMonitors())){
+                        if(virtualMachine.getCountOfMonitors() == searchCriteria.getCountOfMonitors()){
                             tempMatchedVMs.add(virtualMachine);
                         }
+                        break;
                     }
 
                     default: return new ArrayList<>();

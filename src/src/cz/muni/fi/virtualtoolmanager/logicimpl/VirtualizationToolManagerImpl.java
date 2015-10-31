@@ -29,8 +29,6 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -83,8 +81,11 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return;
         } catch (ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + hostMachine
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(hostMachine);
-            outputHandler.printErrorMessage(ex.getMessage());
             return;
         }
         
@@ -141,8 +142,11 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return null;
         } catch (ConnectionFailureException ex) {
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + hostMachine
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(hostMachine);
-            outputHandler.printErrorMessage(ex.getMessage());
             return null;
         }
         
@@ -169,8 +173,11 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return new ArrayList<>();
         } catch (ConnectionFailureException ex) {
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + hostMachine
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(hostMachine);
-            outputHandler.printErrorMessage(ex.getMessage());
             return new ArrayList<>();
         }
         
@@ -214,8 +221,11 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return;
         } catch (ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + hostMachine
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(hostMachine);
-            outputHandler.printErrorMessage(ex.getMessage());
             return;
         }
         
@@ -267,8 +277,11 @@ public class VirtualizationToolManagerImpl implements VirtualizationToolManager{
             outputHandler.printErrorMessage(ex.getMessage());
             return null;
         } catch (ConnectionFailureException ex){
+            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
+                    + "the work with physical machine " + hostMachine
+                    + " and its virtual machines and physical machine will be disconnected -> "
+                    + ex.getMessage());
             connectionManager.disconnectFrom(hostMachine);
-            outputHandler.printErrorMessage(ex.getMessage());
             return null;
         }
         
