@@ -57,6 +57,12 @@ public class ConnectionManagerImpl implements ConnectionManager{
             return;
         }
         
+        if(closingAction == null){
+            outputHandler.printErrorMessage("Disconnection operation failure: "
+                    + "There was used a null closing action.");
+            return;
+        }
+        
         //check if the physical machine is connected
         if(!isConnected(physicalMachine)){
             outputHandler.printErrorMessage("Disconnection operation failure: "
@@ -193,7 +199,7 @@ public class ConnectionManagerImpl implements ConnectionManager{
     
     private void establishConnection(PhysicalMachine physicalMachine, long millis) throws ConnectionFailureException,
                                                                                           IncompatibleVirtToolAPIVersionException{
-        //number of attempts for connection establishment, max. number of attempts is 3
+        //number of attempts for connection establishment, max. number of attempts is 3 (set up the start value)
         int attempt = (millis == -1 ? 3 : 1);        
         NativeVBoxAPIConnection nativeVBoxAPIConnection = new NativeVBoxAPIConnection();
         

@@ -19,6 +19,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager;
+import cz.muni.fi.virtualtoolmanager.pubapi.types.ClosingActionType;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.runner.RunWith;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -305,6 +307,56 @@ public class ConnectionManagerImplTest {
     }
     
     /**
+     * This test tests that if the method ConnectionManagerImpl::connectTo() is called
+     * with negative input value (-1) which should represent maximum wait time between
+     * each attempt to establish connection with a required physical machine then
+     * there is made just one attempt to establish connection.
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void connectToWithNegativeMaxWaitTime1() throws Exception{
+        //represents a physical machine with which there should be the connection established
+        PhysicalMachine pm = new PMBuilder().build();
+        String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();
+                        
+        VirtualizationToolManager vtm = sut.connectTo(pm, -1);
+        
+        assertNotNull("There should has been returned a non-null object of type VirtualizationToolManager", vtm);
+        assertTrue("There should not be written any message on a standard error output", errContent.toString().isEmpty());
+        assertFalse("There should be written a message on a standard output that the connection establishment "
+                + "operation was successful", outContent.toString().isEmpty());
+        
+        //checks the method NativeVBoxAPIConnection::connectTo() was called once as expected
+        verify(natAPIConMock).connectTo(pm);
+    }
+    
+    /**
+     * This test tests that if the method ConnectionManagerImpl::connectTo() is called
+     * with negative input value (Long.MIN_VALUE) which should represent maximum
+     * wait time between each attempt to establish connection with a required
+     * physical machine then there is made just one attempt to establish connection.
+     * 
+     * @throws Exception 
+     */
+    @Test
+    public void connectToWithNegativeMaxWaitTime2() throws Exception{
+        //represents a physical machine with which there should be the connection established
+        PhysicalMachine pm = new PMBuilder().build();
+        String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();
+                        
+        VirtualizationToolManager vtm = sut.connectTo(pm, Long.MIN_VALUE);
+        
+        assertNotNull("There should has been returned a non-null object of type VirtualizationToolManager", vtm);
+        assertTrue("There should not be written any message on a standard error output", errContent.toString().isEmpty());
+        assertFalse("There should be written a message on a standard output that the connection establishment "
+                + "operation was successful", outContent.toString().isEmpty());
+        
+        //checks the method NativeVBoxAPIConnection::connectTo() was called once as expected
+        verify(natAPIConMock).connectTo(pm);
+    }
+    
+    /**
      * This test tests that if the method ConnectionManagerImpl::connectTo() is
      * called with a physical machine on which there is not VirtualBox with a
      * required API version then there is made just one attempt to connect to
@@ -341,9 +393,72 @@ public class ConnectionManagerImplTest {
     }
     
     /**
+     * This test tests that if the method ConnectionManagerImpl::disconnectFrom()
+     * is called with a null closing action then the physical machine is not
+     * disconnected and an error message is written on an error output stream.
+     */
+    @Test
+    public void disconnectFromWithNullClosingAction(){
+        //represents a connected physical machine which should be disconnected
+        PhysicalMachine pm = new PMBuilder().build();
+        
+        //there should be written an error message informing that there was used a null closing action
+        sut.disconnectFrom(pm, null);
+        
+        assertFalse("There should be written error message that there was used a null closing action", errContent.toString().isEmpty());
+        assertTrue("There should not be written any text on standard output", outContent.toString().isEmpty());
+    }
+    
+    /**
+     * This test tests that if the method ConnectionManagerImpl::disconnectFrom()
+     * is called with closing action NONE then there is just the physical machine
+     * removed from the list of connected physical machines, but no other actions
+     * are performed.
+     */
+    @Test
+    public void disconnectFromWithClosingActionNone(){
+        //represents a connected physical machine which should be disconnected
+        PhysicalMachine pm = new PMBuilder().build();
+        
+        when(conPhysMachMock.isConnected(pm)).thenReturn(true);
+        when(conPhysMachMock.remove(pm)).thenReturn(true);
+        
+        sut.disconnectFrom(pm, ClosingActionType.NONE);
+        
+        assertTrue("There should not be written error message", errContent.toString().isEmpty());
+        assertFalse("There should be written any text on standard output", outContent.toString().isEmpty());
+        
+        verify(vtmMock, never()).close();
+    }
+    
+    /**
+     * This test tests that if the method ConnectionManagerImpl::disconnectFrom()
+     * is called with closing action SHUT_DOWN_RUNNING_VM then there are all
+     * running virtual machines on the physical machine shut down before the
+     * physical machine itself is removed from the list of connected physical 
+     * machines.
+     */
+    @Test
+    public void disconnectFromWithClosingActionShutDownRunningVM(){
+        //represents a connected physical machine which should be disconnected
+        PhysicalMachine pm = new PMBuilder().build();
+        
+        when(conPhysMachMock.isConnected(pm)).thenReturn(true);
+        when(conPhysMachMock.remove(pm)).thenReturn(true);
+                
+        sut.disconnectFrom(pm, ClosingActionType.SHUT_DOWN_RUNNING_VM);
+        
+        assertTrue("There should not be written error message", errContent.toString().isEmpty());
+        assertFalse("There should be written any text on standard output", outContent.toString().isEmpty());
+        
+        verify(vtmMock).close();
+    }
+    
+    /**
      * This test tests that there should not be invoked any exception or error when
-     * the method disconnectFrom() is called with valid connected physical machine
-     * and with available network connection and running virtualization tool web server.
+     * the method disconnectFrom() is called with valid connected physical machine,
+     * with closing action SHUT_DOWN_RUNNING_VM and with available network connection
+     * and running virtualization tool web server.
      */
     @Test
     public void disconnectFromConnectedPhysicalMachineWithAvailableConnection(){
@@ -359,7 +474,7 @@ public class ConnectionManagerImplTest {
         when(conPhysMachMock.remove(pm)).thenReturn(true);
         //no exception nor error should appear when the method ConnectionManagerImpl::disconnectFrom() 
         //is called (the optimal scenario)
-        sut.disconnectFrom(pm);
+        sut.disconnectFrom(pm, ClosingActionType.SHUT_DOWN_RUNNING_VM);
         
         assertFalse("Physical machine " + pm + " should not already be connected", conPhysMachMock.isConnected(pm));
         assertTrue("There should not be written any error message on standard error output",
@@ -370,8 +485,9 @@ public class ConnectionManagerImplTest {
     
     /**
      * This test tests that there should be written an error message on standard error output
-     * when the method disconnectFrom() is called when the network connection is not available or
-     * the virtualization tool web server is not running.
+     * when the method disconnectFrom() is called with closing action SHUT_DOWN_RUNNING_VM
+     * when the network connection is not available or the virtualization tool
+     * web server is not running.
      *
      * @throws java.lang.Exception
      */
@@ -391,25 +507,22 @@ public class ConnectionManagerImplTest {
         //is called with a required physical machines and means the PM was successfully removed from the list
         //of connected PMs
         when(conPhysMachMock.remove(pm)).thenReturn(true);
+                
+        sut.disconnectFrom(pm, ClosingActionType.SHUT_DOWN_RUNNING_VM);
         
-        //there should be written an error message on standard error output with information
-        //about incorrect disconnection of physical machine
-        sut.disconnectFrom(pm);
-        
-        assertFalse("Physical machine " + pm + " should not already be connected", conPhysMachMock.isConnected(pm));
-        assertFalse("There should be written error message that physical machine " + pm + " could not "
-                  + "be correctly disconnected", errContent.toString().isEmpty());
+        assertFalse("Physical machine " + pm + " should not already be connected", conPhysMachMock.isConnected(pm));       
+        assertFalse("There should be written an error message on the error output stream", errContent.toString().isEmpty());
     }
     
     /**
      * This test tests that there should be written an error message on standard error output
      * when the method disconnectFrom() is called with physical machine which is not connected
-     * at the moment of method execution.
+     * at the moment of method execution and with closing action NONE.
      * 
      * @throws java.lang.Exception
      */
     @Test
-    public void disconnectFromNotConnectedPhysicalMachine() throws Exception{
+    public void disconnectFromNotConnectedPhysicalMachineWithClosingActionNone() throws Exception{
         //represents a physical machine which should be disconnected, but is not connected
         PhysicalMachine pm = new PMBuilder().build();
         
@@ -427,13 +540,37 @@ public class ConnectionManagerImplTest {
     
     /**
      * This test tests that there should be written an error message on standard error output
-     * when the method disconnectFrom() is called with physical machine which has incorrect
-     * virtualization tool web server port (against the original physical machine which is
-     * recorded as connected physical machine) and that that physical machine cannot and is not
-     * disconnected.
+     * when the method disconnectFrom() is called with physical machine which is not connected
+     * at the moment of method execution and with closing action SHUT_DOWN_RUNNING_VM.
+     * 
+     * @throws java.lang.Exception
      */
     @Test
-    public void disconnectFromPhysicalMachineWithIncorrectWebServerPort() {
+    public void disconnectFromNotConnectedPhysicalMachineWithClosingActionShutDownRunningVM() throws Exception{
+        //represents a physical machine which should be disconnected, but is not connected
+        PhysicalMachine pm = new PMBuilder().build();
+        
+        //this step ensures that the method is ended without any further steps being performed
+        when(conPhysMachMock.isConnected(pm)).thenReturn(false);
+        
+        //there should be written an error message informing that physical machine was not connected
+        sut.disconnectFrom(pm, ClosingActionType.SHUT_DOWN_RUNNING_VM);
+        
+        assertFalse("Physical machine " + pm + " should not be connected", conPhysMachMock.isConnected(pm));
+        assertFalse("There should be written error message that physical machine " + pm + " was not connected "
+                  + " and therefore could not be correctly disconnected", errContent.toString().isEmpty());
+        assertTrue("There should not be written any text on standard output", outContent.toString().isEmpty());
+    }
+    
+    /**
+     * This test tests that there should be written an error message on standard error output
+     * when the method disconnectFrom() is called with physical machine which has incorrect
+     * virtualization tool web server port (against the original physical machine which is
+     * recorded as connected physical machine) and with closing action NONE and
+     * that that physical machine cannot be and is not disconnected.
+     */
+    @Test
+    public void disconnectFromPhysicalMachineWithIncorrectWebServerPortAndClosingActionNone() {
         //represents a connected physical machine
         PhysicalMachine corPM = new PMBuilder().build();
         //represents a physical machine with an incorrect web server port against the connected physical machine corPM
@@ -458,11 +595,41 @@ public class ConnectionManagerImplTest {
     /**
      * This test tests that there should be written an error message on standard error output
      * when the method disconnectFrom() is called with physical machine which has incorrect
-     * username (against the original physical machine which is recorded as connected physical machine)
-     * and that that physical machine cannot and is not disconnected.
+     * virtualization tool web server port (against the original physical machine which is
+     * recorded as connected physical machine) and with closing action SHUT_DOWN_RUNNING_VM
+     * and that that physical machine cannot be and is not disconnected.
      */
     @Test
-    public void disconnectFromPhysicalMachineWithIncorrectUsername() {
+    public void disconnectFromPhysicalMachineWithIncorrectWebServerPortAndClosingActionShutDownRunningVM() {
+        //represents a connected physical machine
+        PhysicalMachine corPM = new PMBuilder().build();
+        //represents a physical machine with an incorrect web server port against the connected physical machine corPM
+        PhysicalMachine incorPM = new PMBuilder().webserverPort("1111").build();
+        
+        //this step ensures that the method is ended without any further steps being done
+        //(PM with incorrect web server port is not found in the list of connected PMs
+        //because of the absolute equality)
+        when(conPhysMachMock.isConnected(incorPM)).thenReturn(false);
+        //this step ensures that quering PM corPM if it is connected returns a positive answer
+        when(conPhysMachMock.isConnected(corPM)).thenReturn(true);
+        
+        //there should be written an error message informing that physical machine was not connected
+        sut.disconnectFrom(incorPM, ClosingActionType.SHUT_DOWN_RUNNING_VM);
+        
+        assertFalse("Physical machine " + incorPM + " should not be connected", conPhysMachMock.isConnected(incorPM));
+        assertFalse("There should be written error message that physical machine " + incorPM + " was not connected "
+                  + " and therefore could not be correctly disconnected", errContent.toString().isEmpty());
+        assertTrue("There should not be written any text on standard output", outContent.toString().isEmpty());
+    }
+    
+    /**
+     * This test tests that there should be written an error message on standard error output
+     * when the method disconnectFrom() is called with physical machine which has incorrect
+     * username (against the original physical machine which is recorded as connected physical machine)
+     * and with closing action NONE and that that physical machine cannot be and is not disconnected.
+     */
+    @Test
+    public void disconnectFromPhysicalMachineWithIncorrectUsernameAndClosingActionNone() {
         //represents a connected physical machine
         PhysicalMachine corPM = new PMBuilder().build();
         //represents a physical machine with an incorrect username against the connected physical machine corPM
@@ -486,11 +653,40 @@ public class ConnectionManagerImplTest {
     /**
      * This test tests that there should be written an error message on standard error output
      * when the method disconnectFrom() is called with physical machine which has incorrect
-     * user password (against the original physical machine which is recorded as connected physical machine)
-     * and that that physical machine cannot and is not disconnected.
+     * username (against the original physical machine which is recorded as connected physical machine)
+     * and with closing action SHUT_DOWN_RUNNING_VM and that that physical machine
+     * cannot be and is not disconnected.
      */
     @Test
-    public void disconnectFromPhysicalMachineWithIncorrectUserPassword() {
+    public void disconnectFromPhysicalMachineWithIncorrectUsernameAndClosingActionShutDownRunningVM() {
+        //represents a connected physical machine
+        PhysicalMachine corPM = new PMBuilder().build();
+        //represents a physical machine with an incorrect username against the connected physical machine corPM
+        PhysicalMachine incorPM = new PMBuilder().username("Henry").build();
+        
+        //this step ensures that the method is ended without any further steps being done
+        //(PM with incorrect username is not found in the list of connected PMs because of the absolute equality)
+        when(conPhysMachMock.isConnected(incorPM)).thenReturn(false);
+        //this step ensures that quering PM corPM if it is connected returns a positive answer
+        when(conPhysMachMock.isConnected(corPM)).thenReturn(true);
+        
+        //there should be written an error message informing that physical machine was not connected
+        sut.disconnectFrom(incorPM, ClosingActionType.SHUT_DOWN_RUNNING_VM);
+        
+        assertFalse("Physical machine " + incorPM + " should not be connected", conPhysMachMock.isConnected(incorPM));
+        assertFalse("There should be written error message that physical machine " + incorPM + " was not connected "
+                  + " and therefore could not be correctly disconnected", errContent.toString().isEmpty());
+        assertTrue("There should not be written any text on standard output", outContent.toString().isEmpty());
+    }
+    
+    /**
+     * This test tests that there should be written an error message on standard error output
+     * when the method disconnectFrom() is called with physical machine which has incorrect
+     * user password (against the original physical machine which is recorded as connected physical machine)
+     * and with closing action NONE and that that physical machine cannot and is not disconnected.
+     */
+    @Test
+    public void disconnectFromPhysicalMachineWithIncorrectUserPasswordAndClosingActionNone() {
         //represents a connected physical machine
         PhysicalMachine corPM = new PMBuilder().build();
         //represents a physical machine with an incorrect user password against the connecte physical machine corPM
@@ -513,14 +709,63 @@ public class ConnectionManagerImplTest {
     
     /**
      * This test tests that there should be written an error message on standard error output
-     * when the method disconnectFrom() is called with null physical machine, because null physical
-     * machine cannot be disconnected.
+     * when the method disconnectFrom() is called with physical machine which has incorrect
+     * user password (against the original physical machine which is recorded as connected physical machine)
+     * and with closing action SHUT_DOWN_RUNNING_VM and that that physical machine
+     * cannot and is not disconnected.
      */
     @Test
-    public void disconnectFromNullPhysicalMachine(){
+    public void disconnectFromPhysicalMachineWithIncorrectUserPasswordAndClosingActionShutDownRunningVM() {
+        //represents a connected physical machine
+        PhysicalMachine corPM = new PMBuilder().build();
+        //represents a physical machine with an incorrect user password against the connecte physical machine corPM
+        PhysicalMachine incorPM = new PMBuilder().userPassword("14gg44").build();
+        
+        //this step ensures that the method is ended without any further steps being done
+        //(PM with incorrect user password is not found in the list of connected PMs because of the absolute equality)
+        when(conPhysMachMock.isConnected(incorPM)).thenReturn(false);
+        //this step ensures that quering PM corPM if it is connected returns a positive answer
+        when(conPhysMachMock.isConnected(corPM)).thenReturn(true);
+        
+        //there should be written an error message informing that physical machine was not connected
+        sut.disconnectFrom(incorPM, ClosingActionType.SHUT_DOWN_RUNNING_VM);
+        
+        assertFalse("Physical machine " + incorPM + " should not be connected", conPhysMachMock.isConnected(incorPM));
+        assertFalse("There should be written error message that physical machine " + incorPM + " was not connected "
+                  + " and therefore could not be correctly disconnected", errContent.toString().isEmpty());
+        assertTrue("There should not be written any text on standard output", outContent.toString().isEmpty());
+    }
+    
+    /**
+     * This test tests that there should be written an error message on standard error output
+     * when the method disconnectFrom() is called with null physical machine, because null physical
+     * machine cannot be disconnected, and with closing action NONE.
+     */
+    @Test
+    public void disconnectFromNullPhysicalMachineWithClosingActionNone(){
         //there should be written an error message that there was used an illegal argument
         //for the method ConnectionManagerImpl::disconnectFrom() when this method is called
         sut.disconnectFrom(null);
+        
+        assertFalse("There should be written an error message that there was made an attempt to "
+                  + "disconnect from null physical machine", errContent.toString().isEmpty());
+        assertTrue("There should not be written any text on standard output", outContent.toString().isEmpty());
+        
+        //checks that the very first (espacially more further steps) step after null object check
+        //has not been done as expected
+        verify(conPhysMachMock, never()).isConnected(any(PhysicalMachine.class));
+    }
+    
+    /**
+     * This test tests that there should be written an error message on standard error output
+     * when the method disconnectFrom() is called with null physical machine, because null physical
+     * machine cannot be disconnected, and with closing action SHUT_DOWN_RUNNING_VM.
+     */
+    @Test
+    public void disconnectFromNullPhysicalMachineWithClosingActionShutDownRunningVM(){
+        //there should be written an error message that there was used an illegal argument
+        //for the method ConnectionManagerImpl::disconnectFrom() when this method is called
+        sut.disconnectFrom(null, ClosingActionType.SHUT_DOWN_RUNNING_VM);
         
         assertFalse("There should be written an error message that there was made an attempt to "
                   + "disconnect from null physical machine", errContent.toString().isEmpty());
@@ -678,7 +923,7 @@ public class ConnectionManagerImplTest {
         
         //checks the method ConnectionManager::disconnectFrom() was called two times, because in the list of
         //connected physical machines there were 2 physical machines stored
-        verify(sutl, times(2)).disconnectFrom(any(PhysicalMachine.class));
+        verify(sutl, times(2)).disconnectFrom(any(PhysicalMachine.class), eq(ClosingActionType.SHUT_DOWN_RUNNING_VM));
     }
     
     /**
