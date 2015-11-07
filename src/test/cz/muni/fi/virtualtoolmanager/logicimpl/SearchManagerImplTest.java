@@ -16,7 +16,6 @@
 package cz.muni.fi.virtualtoolmanager.logicimpl;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
-import cz.muni.fi.virtualtoolmanager.pubapi.entities.PortRule;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.SearchCriteria;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;

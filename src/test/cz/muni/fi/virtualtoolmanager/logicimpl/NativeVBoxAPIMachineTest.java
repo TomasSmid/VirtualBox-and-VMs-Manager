@@ -117,12 +117,61 @@ public class NativeVBoxAPIMachineTest {
        //there should be returned a mock object of type IProgress when the method
        //IMachine::launchVMProcess() is called in order to control returned values of its methods
        when(vboxMachineMock.launchVMProcess(sessionMock, "gui", "")).thenReturn(progressMock);
-       //returned negative answers say the virtual machine is still starting and the positive answer
+       //returned negative answers say the virtual machine is still being started and the positive answer
        //says the virtual machine start up was finished successfully and virtual machine is running now
        when(progressMock.getCompleted()).thenReturn(false, false, true);
+       //value = 0 says the starting operation has been finished successfully
+       when(progressMock.getResultCode()).thenReturn(0);
        
        //there should not appear any exception nor error
        sut.startVM(vm);       
+    }
+    
+    /**
+     * This test tests that if the VM starting operation is not finished successfully
+     * then the virtual machine is not started and UnexpectedVMStateException
+     * exception is invoked.
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void startVMUnsuccessfulOperation() throws Exception {
+       //represents a virtual machine which should be started
+       VirtualMachine vm = new VMBuilder().build();
+       //represents mock object of type ISession for easier and better test control
+       ISession sessionMock = mock(ISession.class);
+       //represents mock object of type IProgress for easier and better test control
+       IProgress progressMock = mock(IProgress.class);
+       
+       //there should be returned a mock object of type IVirtualBox when the method
+       //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
+       when(vbmMock.getVBox()).thenReturn(vboxMock);
+       //there should be returned a mock object of type IMachine when the method
+       //IVirtualBox::findMachine() is called with an ID of a required virtual machine
+       //in order to control returned values of its methods
+       when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
+       //there should be returned a positive answer to query for virtual machine accessibility which
+       //means that there can be performed some operations with the virtual machine
+       when(vboxMachineMock.getAccessible()).thenReturn(true);
+       //there should be returned a state "PoweredOff" when the method IMachine::getState() is called
+       //for first time (when the machine is checked if it is in a valid state for its start up) and
+       //when is called for a second time then is returned state "Running" which signalizes that the virtual
+       //machine was successfully started
+       when(vboxMachineMock.getState()).thenReturn(MachineState.PoweredOff, MachineState.Running);
+       //there should be returned a mock object of type ISession when the method
+       //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
+       when(vbmMock.getSessionObject()).thenReturn(sessionMock);
+       //there should be returned a mock object of type IProgress when the method
+       //IMachine::launchVMProcess() is called in order to control returned values of its methods
+       when(vboxMachineMock.launchVMProcess(sessionMock, "gui", "")).thenReturn(progressMock);
+       //returned negative answers say the virtual machine is still being started and the positive answer
+       //says the virtual machine start up was finished successfully and virtual machine is running now
+       when(progressMock.getCompleted()).thenReturn(false, false, true);
+       //value = -421548 says the starting operation has not been finished successfully
+       when(progressMock.getResultCode()).thenReturn(-421548);
+       
+       exception.expect(UnexpectedVMStateException.class);
+       sut.startVM(vm);
     }
     
     /**
@@ -323,11 +372,11 @@ public class NativeVBoxAPIMachineTest {
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //represents a mock object of type ISession for easier and better test control
-        ISession sessionMocked = mock(ISession.class);
+        ISession sessionMock = mock(ISession.class);
         //represents a mock object of type IProgress for easier and better test control
-        IProgress progressMocked = mock(IProgress.class);
+        IProgress progressMock = mock(IProgress.class);
         //represents a mock object of type IConsole for easier and better test control
-        IConsole consoleMocked = mock(IConsole.class);
+        IConsole consoleMock = mock(IConsole.class);
         
         //there should be returned a mock object of type IVirtualBox when the method
         //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
@@ -345,19 +394,21 @@ public class NativeVBoxAPIMachineTest {
         when(vboxMachineMock.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
         //there should be returned a mock object of type ISession when the method
         //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
-        when(vbmMock.getSessionObject()).thenReturn(sessionMocked);
+        when(vbmMock.getSessionObject()).thenReturn(sessionMock);
         //there should be returned a mock object of type IConsole when the method
         //ISession::getConsole() is called in order to control returned values of its methods
-        when(sessionMocked.getConsole()).thenReturn(consoleMocked);
+        when(sessionMock.getConsole()).thenReturn(consoleMock);
         //there should be returned a mock object of type IProgress when the method
         //IConsole::powerDown() is called in order to control returned values of its methods
-        when(consoleMocked.powerDown()).thenReturn(progressMocked);
+        when(consoleMock.powerDown()).thenReturn(progressMock);
         //there should be returned a positive answer to query for powering down operation completion
         //and means the virtual machine was successfully powered off
-        when(progressMocked.getCompleted()).thenReturn(true);
+        when(progressMock.getCompleted()).thenReturn(true);
+        //returned value = 0 says the VM shutdown operation has been successful
+        when(progressMock.getResultCode()).thenReturn(0);
         //there should be returned a state "Unlocked" which means successful finish of work with
         //the virtual machine
-        when(sessionMocked.getState()).thenReturn(SessionState.Unlocked);
+        when(sessionMock.getState()).thenReturn(SessionState.Unlocked);
         
         //there should not appear any exception nor error
         sut.shutDownVM(vm);
@@ -377,7 +428,7 @@ public class NativeVBoxAPIMachineTest {
         //represents a mock object of type ISession for easier and better test control
         ISession sessionMocked = mock(ISession.class);
         //represents a mock object of type IProgress for easier and better test control
-        IProgress progressMocked = mock(IProgress.class);
+        IProgress progressMock = mock(IProgress.class);
         //represents a mock object of type IConsole for easier and better test control
         IConsole consoleMocked = mock(IConsole.class);
         
@@ -404,12 +455,14 @@ public class NativeVBoxAPIMachineTest {
         when(sessionMocked.getConsole()).thenReturn(consoleMocked);
         //there should be returned a mock object of type IProgress when the method
         //IConsole::powerDown() is called in order to control returned values of its methods
-        when(consoleMocked.powerDown()).thenReturn(progressMocked);
+        when(consoleMocked.powerDown()).thenReturn(progressMock);
         //for first five calls there should be returned a negative answer to query for shut down
         //operation completion and means the virtual machine shut down operation is still
         //being processed, after last 6th call there should be returned a positive answer
         //which signalizes a successful finish of the operation
-        when(progressMocked.getCompleted()).thenReturn(false, false, false, false, false, true);
+        when(progressMock.getCompleted()).thenReturn(false, false, false, false, false, true);
+        //returned value = 0 says the VM shutdown operation has been successful
+        when(progressMock.getResultCode()).thenReturn(0);
         //there should be returned a state "Unlocked" which means successful finish of work with
         //the virtual machine
         when(sessionMocked.getState()).thenReturn(SessionState.Unlocked);
@@ -433,7 +486,7 @@ public class NativeVBoxAPIMachineTest {
         //represents a mock object of type ISession for easier and better test control
         ISession sessionMocked = mock(ISession.class);
         //represents a mock object of type IProgress for easier and better test control
-        IProgress progressMocked = mock(IProgress.class);
+        IProgress progressMock = mock(IProgress.class);
         //represents a mock object of type IConsole for easier and better test control
         IConsole consoleMocked = mock(IConsole.class);
         
@@ -462,10 +515,12 @@ public class NativeVBoxAPIMachineTest {
         when(sessionMocked.getConsole()).thenReturn(consoleMocked);
         //there should be returned a mock object of type IProgress when the method
         //IConsole::powerDown() is called in order to control returned values of its methods
-        when(consoleMocked.powerDown()).thenReturn(progressMocked);
+        when(consoleMocked.powerDown()).thenReturn(progressMock);
         //there should be returned a positive answer to query for powering down operation completion
         //and means the virtual machine was successfully powered off
-        when(progressMocked.getCompleted()).thenReturn(true);
+        when(progressMock.getCompleted()).thenReturn(true);
+        //returned value = 0 says the VM shutdown operation has been successful
+        when(progressMock.getResultCode()).thenReturn(0);
         //there should be returned a state "Unlocked" which means successful finish of work with
         //the virtual machine
         when(sessionMocked.getState()).thenReturn(SessionState.Unlocked);
@@ -489,7 +544,7 @@ public class NativeVBoxAPIMachineTest {
         //represents a mock object of type ISession for easier and better test control
         ISession sessionMocked = mock(ISession.class);
         //represents a mock object of type IProgress for easier and better test control
-        IProgress progressMocked = mock(IProgress.class);
+        IProgress progressMock = mock(IProgress.class);
         //represents a mock object of type IConsole for easier and better test control
         IConsole consoleMocked = mock(IConsole.class);
         
@@ -515,10 +570,12 @@ public class NativeVBoxAPIMachineTest {
         when(sessionMocked.getConsole()).thenReturn(consoleMocked);
         //there should be returned a mock object of type IProgress when the method
         //IConsole::powerDown() is called in order to control returned values of its methods
-        when(consoleMocked.powerDown()).thenReturn(progressMocked);
+        when(consoleMocked.powerDown()).thenReturn(progressMock);
         //there should be returned a positive answer to query for powering down operation completion
         //and means the virtual machine was successfully powered off
-        when(progressMocked.getCompleted()).thenReturn(true);
+        when(progressMock.getCompleted()).thenReturn(true);
+        //returned value = 0 says the VM shutdown operation has been successful
+        when(progressMock.getResultCode()).thenReturn(0);
         //there should be returned a state "Unlocking" for first five calls and eventually
         //there is returned the state "Unlocked" which means successful finish of work with
         //the virtual machine
@@ -527,6 +584,66 @@ public class NativeVBoxAPIMachineTest {
                                                   SessionState.Unlocking,SessionState.Unlocked);
         
         //there should not appear any exception nor error
+        sut.shutDownVM(vm);
+    }
+    
+    /**
+     * This test tests that if the VM shutdown operation is not finished successfully
+     * then the VM is not shut down and UnexpectedVMStateException exception is
+     * invoked.
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void shutDownVMUnsuccessfulOperation() throws Exception {
+        //represents a virtual machine which should be shut down
+        VirtualMachine vm = new VMBuilder().build();
+        //represents a mock object of type ISession for easier and better test control
+        ISession sessionMocked = mock(ISession.class);
+        //represents a mock object of type IProgress for easier and better test control
+        IProgress progressMock = mock(IProgress.class);
+        //represents a mock object of type IConsole for easier and better test control
+        IConsole consoleMocked = mock(IConsole.class);
+        //represents a mock object of type IVirtualBoxErrorInfo for easier and better test control
+        IVirtualBoxErrorInfo vboxErrInfoMock = mock(IVirtualBoxErrorInfo.class);
+        
+        //there should be returned a mock object of type IVirtualBox when the method
+        //VirtualBoxManager::getVBox() is called in order to control returned values of its methods
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
+        //there should be returned a mock object of type IMachine when the method
+        //IVirtualBox::findMachine() is called with an ID of a required virtual machine
+        //in order to control returned values of its methods
+        when(vboxMock.findMachine(vm.getId().toString())).thenReturn(vboxMachineMock);
+        //there should be returned a positive answer to query for virtual machine accessibility
+        //and means that there can be performed some operations with a virtual machine
+        when(vboxMachineMock.getAccessible()).thenReturn(true);
+        //there should be returned the state "Running" when the method IMachine::getState()
+        //is called for the first time and the state "PoweredOff" when it is called for the
+        //second time and it signalizes switching virtual machine state (successful shut down)
+        when(vboxMachineMock.getState()).thenReturn(MachineState.Running, MachineState.PoweredOff);
+        //there should be returned a mock object of type ISession when the method
+        //VirtualBoxManager::getSessionObject() is called in order to control returned values of its methods
+        when(vbmMock.getSessionObject()).thenReturn(sessionMocked);
+        //there should be returned a mock object of type IConsole when the method
+        //ISession::getConsole() is called in order to control returned values of its methods
+        when(sessionMocked.getConsole()).thenReturn(consoleMocked);
+        //there should be returned a mock object of type IProgress when the method
+        //IConsole::powerDown() is called in order to control returned values of its methods
+        when(consoleMocked.powerDown()).thenReturn(progressMock);
+        //there should be returned a positive answer to query for powering down operation completion
+        //and means the virtual machine was successfully powered off
+        when(progressMock.getCompleted()).thenReturn(true);
+        //returned value = -4811 says the VM shutdown operation has not been successful
+        when(progressMock.getResultCode()).thenReturn(-4811);
+        //there should be returned a mock object of type IVirtualBoxErrorInfo
+        when(progressMock.getErrorInfo()).thenReturn(vboxErrInfoMock);
+        //non-empty string should be returned
+        when(vboxErrInfoMock.getText()).thenReturn("error message");
+        //there should be returned a state "Unlocked" which means successful finish of work with
+        //the virtual machine
+        when(sessionMocked.getState()).thenReturn(SessionState.Unlocked);
+        
+        exception.expect(UnexpectedVMStateException.class);
         sut.shutDownVM(vm);
     }
     

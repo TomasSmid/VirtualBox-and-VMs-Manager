@@ -21,6 +21,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureExceptio
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.CloneType;
+import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,6 +53,7 @@ import org.virtualbox_4_3.IConsole;
 import org.virtualbox_4_3.IGuestOSType;
 import org.virtualbox_4_3.IMachine;
 import org.virtualbox_4_3.IMedium;
+import org.virtualbox_4_3.IMediumAttachment;
 import org.virtualbox_4_3.IProgress;
 import org.virtualbox_4_3.ISession;
 import org.virtualbox_4_3.ISnapshot;
@@ -59,6 +61,7 @@ import org.virtualbox_4_3.ISystemProperties;
 import org.virtualbox_4_3.IVirtualBox;
 import org.virtualbox_4_3.IVirtualBoxErrorInfo;
 import org.virtualbox_4_3.MachineState;
+import org.virtualbox_4_3.MediumState;
 import org.virtualbox_4_3.SessionState;
 import org.virtualbox_4_3.VBoxException;
 import org.virtualbox_4_3.VirtualBoxManager;
@@ -174,6 +177,7 @@ public class NativeVBoxAPIManagerTest {
         String vmName = "VirtualMachine_01";
         //mock object of type ISystemProperties for better test control
         ISystemProperties sysPropMock = mock(ISystemProperties.class);
+        VBoxException vboxExceptionMock = mock(VBoxException.class);
 
         //mocked object of type IVirtualBox is returned in order to have a control
         //over the method performing
@@ -187,7 +191,91 @@ public class NativeVBoxAPIManagerTest {
         //when the method IVirtualBox::openMachine() is called then the exception VBoxException
         //is invoked which means that the virtual machine with name "VirtualMachine_01" is not
         //present in a default VM folder of virtualization tool VirtualBox 
-        doThrow(VBoxException.class).when(vboxMock).openMachine(contains(vmName));        
+        doThrow(vboxExceptionMock).when(vboxMock).openMachine(contains(vmName));
+        //string "VirtualBox VMs" should be returned when the method ISystemProperties::getDefaultMachineFolder() is called
+        when(sysPropMock.getDefaultMachineFolder()).thenReturn("VirtualBox VMs");
+        //string "(Path not found.)" should be returned when the method VBoxException::getMessage() is called
+        when(vboxExceptionMock.getMessage()).thenReturn("(Path not found.)");
+
+        exception.expect(UnknownVirtualMachineException.class);
+        sut.registerVirtualMachine(pm, vmName);
+    }
+    
+    /**
+     * This test tests that there is invoked UnknownVirtualMachineException
+     * exception when the virtual machine which is intended to be registered on
+     * a physical machine has not its vdi file in a default VM
+     * folder of the virtualization tool VirtualBox on this physical machine.
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void registerVirtualMachineWithMissingVDI() throws Exception {
+        //physical machine on which should be virtual machine registered
+        PhysicalMachine pm = new PMBuilder().build();
+        //virtual machine which is intended to be newly registered
+        String vmName = "VirtualMachine_01";
+        //mock object of type ISystemProperties for better test control
+        ISystemProperties sysPropMock = mock(ISystemProperties.class);
+        VBoxException vboxExceptionMock = mock(VBoxException.class);
+
+        //mocked object of type IVirtualBox is returned in order to have a control
+        //over the method performing
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
+        //when the method IVirtualBox::findMachine() is called then the exception VBoxException
+        //is invoked which means that the virtual machine with name "VirtualMachine_01" can be registered        
+        doThrow(VBoxException.class).when(vboxMock).findMachine(vmName);
+        //there should be returned a mock object of type ISystemProperties when the method
+        //IVirtualBox::getSystemProperties() is called in order to control behavior and returned values of its methods
+        when(vboxMock.getSystemProperties()).thenReturn(sysPropMock);
+        //when the method IVirtualBox::openMachine() is called then the exception VBoxException
+        //is invoked which means that the virtual machine with name "VirtualMachine_01" is not
+        //present in a default VM folder of virtualization tool VirtualBox 
+        doThrow(vboxExceptionMock).when(vboxMock).openMachine(contains(vmName));
+        //string "VirtualBox VMs" should be returned when the method ISystemProperties::getDefaultMachineFolder() is called
+        when(sysPropMock.getDefaultMachineFolder()).thenReturn("VirtualBox VMs");
+        //string "Error occured: Could not find an open hard disk" should be returned when the method VBoxException::getMessage() is called
+        when(vboxExceptionMock.getMessage()).thenReturn("Error occured: Could not find an open hard disk");
+
+        exception.expect(UnknownVirtualMachineException.class);
+        sut.registerVirtualMachine(pm, vmName);
+    }
+    
+    /**
+     * This test tests that there is invoked UnknownVirtualMachineException
+     * exception when the virtual machine which is intended to be registered on
+     * a physical machine could not be opened (missing or corrupted configuration
+     * files or another problem).
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void registerVirtualMachineWithUnsuccessfulMachineOpening() throws Exception {
+        //physical machine on which should be virtual machine registered
+        PhysicalMachine pm = new PMBuilder().build();
+        //virtual machine which is intended to be newly registered
+        String vmName = "VirtualMachine_01";
+        //mock object of type ISystemProperties for better test control
+        ISystemProperties sysPropMock = mock(ISystemProperties.class);
+        VBoxException vboxExceptionMock = mock(VBoxException.class);
+
+        //mocked object of type IVirtualBox is returned in order to have a control
+        //over the method performing
+        when(vbmMock.getVBox()).thenReturn(vboxMock);
+        //when the method IVirtualBox::findMachine() is called then the exception VBoxException
+        //is invoked which means that the virtual machine with name "VirtualMachine_01" can be registered        
+        doThrow(VBoxException.class).when(vboxMock).findMachine(vmName);
+        //there should be returned a mock object of type ISystemProperties when the method
+        //IVirtualBox::getSystemProperties() is called in order to control behavior and returned values of its methods
+        when(vboxMock.getSystemProperties()).thenReturn(sysPropMock);
+        //when the method IVirtualBox::openMachine() is called then the exception VBoxException
+        //is invoked which means that the virtual machine with name "VirtualMachine_01" is not
+        //present in a default VM folder of virtualization tool VirtualBox 
+        doThrow(vboxExceptionMock).when(vboxMock).openMachine(contains(vmName));
+        //string "VirtualBox VMs" should be returned when the method ISystemProperties::getDefaultMachineFolder() is called
+        when(sysPropMock.getDefaultMachineFolder()).thenReturn("VirtualBox VMs");
+        //string "Error occured" should be returned when the method VBoxException::getMessage() is called
+        when(vboxExceptionMock.getMessage()).thenReturn("Error occured");
 
         exception.expect(UnknownVirtualMachineException.class);
         sut.registerVirtualMachine(pm, vmName);
@@ -226,7 +314,7 @@ public class NativeVBoxAPIManagerTest {
      * @throws java.lang.Exception
      */
     @Test
-    public void getVirtualMachineByIdIWithSomeMatch() throws Exception {
+    public void getVirtualMachineByIdWithSomeMatch() throws Exception {
         //represents host machine from which is virtual machine required
         PhysicalMachine pm = new PMBuilder().build();
         //represents virtual machine with all correct and expected values of its attributes 
@@ -239,6 +327,10 @@ public class NativeVBoxAPIManagerTest {
         IGuestOSType guestOSTypeMocked = mock(IGuestOSType.class);
         //represents mock object of type IMedium for better test control
         IMedium mediumMocked = mock(IMedium.class);
+        //represents mock object of type IMediumAttachment for easier and better test control 
+        IMediumAttachment medAttachMock = mock(IMediumAttachment.class);
+        //represents list of SATA medium controllers
+        List<IMediumAttachment> medAttachs = Arrays.asList(medAttachMock);
 
         //mock object of type IVirtualBox is returned when the method VirtualBoxManager::getVBox()
         //is called in order to control returned values of its methods
@@ -253,6 +345,12 @@ public class NativeVBoxAPIManagerTest {
         when(guestOSTypeMocked.getFamilyId()).thenReturn("Linux");
         //string with value = "Fedora_64" should be returned when the method IGuestOSType::getId() is called
         when(guestOSTypeMocked.getId()).thenReturn("Fedora_64");
+        //list medAttachs is returned when the method IMachine::getMediumAttachmentOfController() is called for SATA type
+        when(machineMocked.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs);
+        //port number = 0 should be returned when the method IMediumAttachment::getPort() is called
+        when(medAttachMock.getPort()).thenReturn(0);
+        //device number = 0 should be returned when the method IMediumAttachment::getDevice() is called
+        when(medAttachMock.getDevice()).thenReturn(0);
         //mock object of type IMedium is returned when the method IMachine::getMedium() is called
         //with particular arguments in order to control returned values of its methods
         when(machineMocked.getMedium("SATA", 0, 0)).thenReturn(mediumMocked);
@@ -358,6 +456,10 @@ public class NativeVBoxAPIManagerTest {
         IGuestOSType guestOSTypeMocked = mock(IGuestOSType.class);
         //represents mock object of type IMedium for better test control
         IMedium mediumMocked = mock(IMedium.class);
+        //represents mock object of type IMediumAttachment for easier and better test control 
+        IMediumAttachment medAttachMock = mock(IMediumAttachment.class);
+        //represents list of SATA medium controllers
+        List<IMediumAttachment> medAttachs = Arrays.asList(medAttachMock);
 
         //mock object of type IVirtualBox is returned when the method VirtualBoxManager::getVBox()
         //is called in order to control returned values of its methods
@@ -372,6 +474,12 @@ public class NativeVBoxAPIManagerTest {
         when(guestOSTypeMocked.getFamilyId()).thenReturn("Linux");
         //string with value = "Fedora_64" should be returned when the method IGuestOSType::getId() is called
         when(guestOSTypeMocked.getId()).thenReturn("Fedora_64");
+        //list medAttachs is returned when the method IMachine::getMediumAttachmentOfController() is called for SATA type
+        when(machineMocked.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs);
+        //port number = 0 should be returned when the method IMediumAttachment::getPort() is called
+        when(medAttachMock.getPort()).thenReturn(0);
+        //device number = 0 should be returned when the method IMediumAttachment::getDevice() is called
+        when(medAttachMock.getDevice()).thenReturn(0);
         //mock object of type IMedium is returned when the method IMachine::getMedium() is called
         //with particular arguments in order to control returned values of its methods
         when(machineMocked.getMedium("SATA", 0, 0)).thenReturn(mediumMocked);
@@ -488,6 +596,14 @@ public class NativeVBoxAPIManagerTest {
         IMedium mediumMocked2 = mock(IMedium.class);
         //represents list of vbox machines which is expected as a result of IVirtualBox::getMachines() method call
         List<IMachine> vboxMachines = Arrays.asList(machineMocked1, machineMocked2);
+        //represents mock object of type IMediumAttachment for easier and better test control 
+        IMediumAttachment medAttachMock1 = mock(IMediumAttachment.class);
+        //represents list of SATA medium controllers
+        List<IMediumAttachment> medAttachs1 = Arrays.asList(medAttachMock1);
+        //represents mock object of type IMediumAttachment for easier and better test control 
+        IMediumAttachment medAttachMock2 = mock(IMediumAttachment.class);
+        //represents list of SATA medium controllers
+        List<IMediumAttachment> medAttachs2 = Arrays.asList(medAttachMock2);
 
         //mock object of type IVirtualBox is returned when the method VirtualBoxManager::getVBox()
         //is called in order to control returned values of its methods
@@ -551,6 +667,18 @@ public class NativeVBoxAPIManagerTest {
         when(mediumMocked1.getSize()).thenReturn(vm1.getHardDiskTotalSize() - vm1.getHardDiskFreeSpaceSize());
         //there should be returned Long value = 169980000 when the method IMedium::getSize() is called
         when(mediumMocked2.getSize()).thenReturn(vm2.getHardDiskTotalSize() - vm2.getHardDiskFreeSpaceSize());
+        //list medAttachs is returned when the method IMachine::getMediumAttachmentOfController() is called for SATA type
+        when(machineMocked1.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs1);
+        //port number = 0 should be returned when the method IMediumAttachment::getPort() is called
+        when(medAttachMock1.getPort()).thenReturn(0);
+        //device number = 0 should be returned when the method IMediumAttachment::getDevice() is called
+        when(medAttachMock1.getDevice()).thenReturn(0);
+        //list medAttachs is returned when the method IMachine::getMediumAttachmentOfController() is called for SATA type
+        when(machineMocked2.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs2);
+        //port number = 0 should be returned when the method IMediumAttachment::getPort() is called
+        when(medAttachMock2.getPort()).thenReturn(0);
+        //device number = 0 should be returned when the method IMediumAttachment::getDevice() is called
+        when(medAttachMock2.getDevice()).thenReturn(0);
         //when the method NativeVBoxAPIManager::getAllVirtualMachines() is called then there should
         //be returned a list with 2 virtual machines
         List<VirtualMachine> actList = sut.getAllVirtualMachines(pm);
@@ -869,9 +997,19 @@ public class NativeVBoxAPIManagerTest {
         //represents mock object of type IMedium for easier and better test control
         IGuestOSType guestOSTypeMocked = mock(IGuestOSType.class);
         //represents mock object of type IMedium for easier and better test control
-        IMedium mediumMocked = mock(IMedium.class);
+        IMedium cloneMediumMock = mock(IMedium.class);
         //represents mock object of type IProgress for easier and better test control
         IProgress progressMock = mock(IProgress.class);
+        //represents mock object of type IMediumAttachment for easier and better test control
+        IMediumAttachment medAttachMock = mock(IMediumAttachment.class);
+        //list of SATA controllers
+        List<IMediumAttachment> medAttachs = Arrays.asList(medAttachMock);
+        //represents mock object of type IMedium for easier and better test control
+        IMedium vboxMachMediumMock = mock(IMedium.class);
+        //represents mock object of type ISystemProperties for easier and  better test control
+        ISystemProperties sysPropMock = mock(ISystemProperties.class);
+        File cloneFolderMock = mock(File.class);
+        PowerMockito.whenNew(File.class).withAnyArguments().thenReturn(cloneFolderMock);
 
        //there should be returned mock object of type IVirtualBox when the method VirtualBoxManager::getVBox()
         //is called in order to control returned values of its methods
@@ -883,9 +1021,18 @@ public class NativeVBoxAPIManagerTest {
         when(vboxMachineMock.getAccessible()).thenReturn(true);
         //there should be returned machine state with value = "PoweredOff" (also could be "Running", "Saved", "Paused")
         when(vboxMachineMock.getState()).thenReturn(MachineState.PoweredOff);
+        when(vboxMachineMock.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs);
+        when(medAttachMock.getPort()).thenReturn(0);
+        when(medAttachMock.getDevice()).thenReturn(0);
+        when(vboxMachineMock.getMedium("SATA", 0, 0)).thenReturn(vboxMachMediumMock);
+        when(vboxMachMediumMock.getState()).thenReturn(MediumState.Created);
         //there should be returned string with value = "VirtualMachine_01"
-        when(vboxMachineMock.getName()).thenReturn(vm.getName());        
+        when(vboxMachineMock.getName()).thenReturn(vm.getName());
+        when(vboxMachineMock.getOSTypeId()).thenReturn("Fedora_64");
+        when(vboxMock.getSystemProperties()).thenReturn(sysPropMock);
+        when(sysPropMock.getDefaultMachineFolder()).thenReturn("VirtualBox VMs");
         doThrow(VBoxException.class).when(vboxMock).findMachine(expClone.getName());
+        when(cloneFolderMock.isDirectory()).thenReturn(false);        
         when(vboxMachineMock.getId()).thenReturn(vm.getId().toString());
         when(clonableMachineMock.getOSTypeId()).thenReturn("Fedora_64");
        //there should be returned mock object of type IMachine when the method IVirtualBox::createMachine()
@@ -894,6 +1041,7 @@ public class NativeVBoxAPIManagerTest {
         when(clonableMachineMock.cloneTo(machineCloneMocked, CloneMode.AllStates, new ArrayList<>())).thenReturn(progressMock);
         when(progressMock.getCompleted()).thenReturn(false, false, false, false, true);
         when(progressMock.getPercent()).thenReturn(0L, 20L, 50L, 99L);
+        when(progressMock.getResultCode()).thenReturn(0);
         //there should be returned string with value = "Fedora_64"
         when(vboxMachineMock.getOSTypeId()).thenReturn("Fedora_64");
         //there should be returned string with value = "Fedora_64"
@@ -901,9 +1049,12 @@ public class NativeVBoxAPIManagerTest {
         //there should be returned mock object of type IGuestOSType when the method IVirtualBox::getGuestOSType()
         //is called in order to control returned values of its methods
         when(vboxMock.getGuestOSType("Fedora_64")).thenReturn(guestOSTypeMocked);
+        when(machineCloneMocked.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs);
+        when(medAttachMock.getPort()).thenReturn(0);
+        when(medAttachMock.getDevice()).thenReturn(0);
         //there should be returned mock object of type IMedium when the method IMachine::getMedium() is called
         //in order to control returned values of its methods
-        when(machineCloneMocked.getMedium("SATA", 0, 0)).thenReturn(mediumMocked);
+        when(machineCloneMocked.getMedium("SATA", 0, 0)).thenReturn(cloneMediumMock);
         //there should be returned string with value = "399d0aea-01aa-4a55-a9b7-5cd345570a1"
         when(machineCloneMocked.getId()).thenReturn(expClone.getId().toString());
         //there should be returned string with value = "VirtualMachine_01_FCopy1"
@@ -919,9 +1070,9 @@ public class NativeVBoxAPIManagerTest {
         //there should be returned Long value = 12
         when(machineCloneMocked.getVRAMSize()).thenReturn(expClone.getSizeOfVRAM());
         //there should be returned Long value = 21474836480
-        when(mediumMocked.getLogicalSize()).thenReturn(expClone.getHardDiskTotalSize());
+        when(cloneMediumMock.getLogicalSize()).thenReturn(expClone.getHardDiskTotalSize());
         //there should be returned Long value = 7187988480
-        when(mediumMocked.getSize()).thenReturn(expClone.getHardDiskTotalSize() - expClone.getHardDiskFreeSpaceSize());
+        when(cloneMediumMock.getSize()).thenReturn(expClone.getHardDiskTotalSize() - expClone.getHardDiskFreeSpaceSize());
         //there should be returned string with value = "Linux"
         when(guestOSTypeMocked.getFamilyId()).thenReturn(expClone.getTypeOfOS());
         //there should be returned string with value = "Fedora_64"
@@ -959,7 +1110,7 @@ public class NativeVBoxAPIManagerTest {
         //represents mock object of type IMedium for easier and better test control
         IGuestOSType guestOSTypeMocked = mock(IGuestOSType.class);
         //represents mock object of type IMedium for easier and better test control
-        IMedium mediumMocked = mock(IMedium.class);
+        IMedium cloneMediumMock = mock(IMedium.class);
         //represents mock object of type ISession for easier and better test control
         ISession sessionMock = mock(ISession.class);
         //represents mock object of type IConsole for easier and better test control
@@ -970,6 +1121,16 @@ public class NativeVBoxAPIManagerTest {
         IProgress progressMock2 = mock(IProgress.class);
         //represents mock object of type ISnapshot for easier and better test control
         ISnapshot snapshotMock = mock(ISnapshot.class);
+        //represents mock object of type IMediumAttachment for easier and better test control
+        IMediumAttachment medAttachMock = mock(IMediumAttachment.class);
+        //list of SATA controllers
+        List<IMediumAttachment> medAttachs = Arrays.asList(medAttachMock);
+        //represents mock object of type IMedium for easier and better test control
+        IMedium vboxMachMediumMock = mock(IMedium.class);
+        //represents mock object of type ISystemProperties for easier and  better test control
+        ISystemProperties sysPropMock = mock(ISystemProperties.class);
+        File cloneFolderMock = mock(File.class);
+        PowerMockito.whenNew(File.class).withAnyArguments().thenReturn(cloneFolderMock);
 
        //there should be returned mock object of type IVirtualBox when the method VirtualBoxManager::getVBox()
         //is called in order to control returned values of its methods
@@ -981,9 +1142,17 @@ public class NativeVBoxAPIManagerTest {
         when(vboxMachineMock.getAccessible()).thenReturn(true);
         //there should be returned machine state with value = "PoweredOff" (also could "Running", "Saved", "Paused")
         when(vboxMachineMock.getState()).thenReturn(MachineState.PoweredOff);
+        when(vboxMachineMock.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs);
+        when(medAttachMock.getPort()).thenReturn(0);
+        when(medAttachMock.getDevice()).thenReturn(0);
+        when(vboxMachineMock.getMedium("SATA", 0, 0)).thenReturn(vboxMachMediumMock);
+        when(vboxMachMediumMock.getState()).thenReturn(MediumState.Created);
         //there should be returned string with value = "VirtualMachine_01"
         when(vboxMachineMock.getName()).thenReturn(vm.getName());
+        when(vboxMock.getSystemProperties()).thenReturn(sysPropMock);
+        when(sysPropMock.getDefaultMachineFolder()).thenReturn("VirtualBox VMs");
         doThrow(VBoxException.class).when(vboxMock).findMachine(expClone.getName());
+        when(cloneFolderMock.isDirectory()).thenReturn(false);
         when(vbmMock.getSessionObject()).thenReturn(sessionMock);
         when(sessionMock.getConsole()).thenReturn(consoleMock);
         when(consoleMock.takeSnapshot("Linked Base For " + vm.getName() + " and " + expClone.getName(), null))
@@ -1000,14 +1169,18 @@ public class NativeVBoxAPIManagerTest {
                 .thenReturn(progressMock2);
         when(progressMock2.getCompleted()).thenReturn(false, false, false, false, true);
         when(progressMock2.getPercent()).thenReturn(0L, 20L, 50L, 99L);
+        when(progressMock2.getResultCode()).thenReturn(0);
         //there should be returned string with value = "Fedora_64"
         when(vboxMachineCloneMock.getOSTypeId()).thenReturn("Fedora_64");
         //there should be returned mock object of type IGuestOSType when the method IVirtualBox::getGuestOSType()
         //is called in order to control returned values of its methods
         when(vboxMock.getGuestOSType("Fedora_64")).thenReturn(guestOSTypeMocked);
+        when(vboxMachineCloneMock.getMediumAttachmentsOfController("SATA")).thenReturn(medAttachs);
+        when(medAttachMock.getPort()).thenReturn(0);
+        when(medAttachMock.getDevice()).thenReturn(0);
        //there should be returned mock object of type IMedium when the method IMachine::getMedium() is called
         //in order to control returned values of its methods
-        when(vboxMachineCloneMock.getMedium("SATA", 0, 0)).thenReturn(mediumMocked);
+        when(vboxMachineCloneMock.getMedium("SATA", 0, 0)).thenReturn(cloneMediumMock);
         //there should be returned string with value = "399d0aea-01aa-4a55-a9b7-5cd345570a1"
         when(vboxMachineCloneMock.getId()).thenReturn(expClone.getId().toString());
         //there should be returned string with value = "VirtualMachine_01_FCopy1"
@@ -1023,9 +1196,9 @@ public class NativeVBoxAPIManagerTest {
         //there should be returned Long value = 12
         when(vboxMachineCloneMock.getVRAMSize()).thenReturn(expClone.getSizeOfVRAM());
         //there should be returned Long value = 21474836480
-        when(mediumMocked.getLogicalSize()).thenReturn(expClone.getHardDiskTotalSize());
+        when(cloneMediumMock.getLogicalSize()).thenReturn(expClone.getHardDiskTotalSize());
         //there should be returned Long value = 7187988480
-        when(mediumMocked.getSize()).thenReturn(expClone.getHardDiskTotalSize() - expClone.getHardDiskFreeSpaceSize());
+        when(cloneMediumMock.getSize()).thenReturn(expClone.getHardDiskTotalSize() - expClone.getHardDiskFreeSpaceSize());
         //there should be returned string with value = "Linux"
         when(guestOSTypeMocked.getFamilyId()).thenReturn(expClone.getTypeOfOS());
         //there should be returned string with value = "Fedora_64"
