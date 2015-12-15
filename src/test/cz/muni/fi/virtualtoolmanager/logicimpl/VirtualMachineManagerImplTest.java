@@ -22,6 +22,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureExceptio
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownPortRuleException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException;
+import cz.muni.fi.virtualtoolmanager.pubapi.types.FrontEndType;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.ProtocolType;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -96,7 +97,7 @@ public class VirtualMachineManagerImplTest {
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(true);
 
         //there should not appear any exception nor error
-        sut.startVM(vm);
+        sut.startVM(vm, FrontEndType.GUI);
 
         assertFalse("There should be written a message on a standard output that the virtual "
                 + "machine was successfully started", outContent.toString().isEmpty());
@@ -114,13 +115,35 @@ public class VirtualMachineManagerImplTest {
     @Test
     public void startNullVM() throws Exception {
 
-        sut.startVM(null);
+        sut.startVM(null, FrontEndType.GUI);
 
         assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
         assertFalse("There should be written a message on a standard error output that there was made an attempt "
                 + "to start a null virtual machine", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::startVM() has never been called as expected
-        verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class));
+        verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class), any(FrontEndType.class));
+    }
+    
+    /**
+     * This test tests that if the method VirtualMachineManagerImpl::startVM()
+     * is called with a null front-end type argument then the virtual machine
+     * start-up operation itself is not even started and on a standard error
+     * output appears an error informing message.
+     * 
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void startVMWithNullFrontEndType() throws Exception {
+        //represents a virtual machine which should be started
+        VirtualMachine vm = new VMBuilder().build();
+        
+        sut.startVM(vm, null);
+
+        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
+        assertFalse("There should be written a message on a standard error output that there was specified a null "
+                + "guest front-end type", errContent.toString().isEmpty());
+        //checks the method NativeVBoxAPIMachine::startVM() has never been called as expected
+        verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class), any(FrontEndType.class));
     }
 
     /**
@@ -144,11 +167,11 @@ public class VirtualMachineManagerImplTest {
        //there should be thrown the UnknownVirtualMachineException exception when
         //the method NativeVBoxAPIMachine::startVM() is called with a required virtual machine
         //and means that the virtual machine does not exist and cannot be started
-        doThrow(unVirtMachExMock).when(natAPIMachMock).startVM(vm);
+        doThrow(unVirtMachExMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
         //there should be returned a non-empty string value when the method UnknownVirtualMachineException::getMessage() is called
         when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
 
-        sut.startVM(vm);
+        sut.startVM(vm, FrontEndType.GUI);
         
         assertFalse("There should be written a message on a standard error output that there was made an attempt "
                 + "to start a virtual machine which does not exist", errContent.toString().isEmpty());
@@ -176,11 +199,11 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::startVM() is called with a required virtual machine
         //and means that the virtual machine's source files are missing or corrupted
         //and cannot be started
-        doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm);
+        doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
         //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
         when(unexVMStateMock.getMessage()).thenReturn("Any error message");
         
-        sut.startVM(vm);
+        sut.startVM(vm, FrontEndType.GUI);
         
         assertFalse("There should be written a message on a standard error output that there was made an attempt "
                 + "to start a virtual machine which is not accessible", errContent.toString().isEmpty());
@@ -208,11 +231,11 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::startVM() is called with a required virtual machine
         //and means that the virtual machine has already been started, because the only
         //invalid states are "Running" and "Paused" and therefore cannot be started again
-        doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm);
+        doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
         //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
         when(unexVMStateMock.getMessage()).thenReturn("Any error message");
 
-        sut.startVM(vm);
+        sut.startVM(vm, FrontEndType.GUI);
         
         assertFalse("There should be written a message on a standard error output that there was made an attempt "
                 + "to start a virtual machine which is not in a required state for start-up", errContent.toString().isEmpty());
@@ -241,11 +264,11 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::startVM() is called with a required virtual machine
         //and means that the virtual machine is being used by another process now
         //which has the lock on the virtual machine
-        doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm);
+        doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
         //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
         when(unexVMStateMock.getMessage()).thenReturn("Any error message");
 
-        sut.startVM(vm);
+        sut.startVM(vm, FrontEndType.GUI);
         
         assertFalse("There should be written a message on a standard error output that there was made an attempt "
                 + "to start a virtual machine which is already being used by another process",
@@ -270,14 +293,14 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
-        sut.startVM(vm);
+        sut.startVM(vm, FrontEndType.GUI);
         
         assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
         assertFalse("There should be written a message on a standard error output that there was made an attempt "
                 + "to start a virtual machine on a physical machine which is not connected",
                 errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::startVM() has never been called as expected
-        verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class));
+        verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class), any(FrontEndType.class));
     }
 
     /**
@@ -304,11 +327,11 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::startVM() is called with a required virtual machine
         //and means that there occured any connection problem at the beginning
         //of the start-up operation
-        doThrow(conFailExMock).when(natAPIMachMock).startVM(vm);
+        doThrow(conFailExMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
         //there should be returned a non-empty string value when the method ConnectionFailureException::getMessage() is called
         when(conFailExMock.getMessage()).thenReturn("Any error message");
 
-        sut.startVM(vm);
+        sut.startVM(vm, FrontEndType.GUI);
         
         assertFalse("There should be written a message on a standard error output that there occured "
                 + "any connection problem", errContent.toString().isEmpty());

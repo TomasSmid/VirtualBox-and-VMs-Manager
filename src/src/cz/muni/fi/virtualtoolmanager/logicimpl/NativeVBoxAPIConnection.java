@@ -57,8 +57,7 @@ class NativeVBoxAPIConnection {
     public void connectTo(PhysicalMachine physicalMachine) throws ConnectionFailureException,
                                                                   IncompatibleVirtToolAPIVersionException{
             //url of the physical machine used for connecting to it
-            String url = "http://" + physicalMachine.getAddressIP() + ":" 
-                    + physicalMachine.getPortOfVTWebServer();
+            String url = getURL(physicalMachine);
             //object from the native VirtualBox API which manages the connection establishment
             VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
             
@@ -102,5 +101,15 @@ class NativeVBoxAPIConnection {
             //machine
             virtualBoxManager.disconnect();
             virtualBoxManager.cleanup();
-    }    
+    }
+    
+    private String getURL(PhysicalMachine physicalMachine){
+        if(physicalMachine.getAddressIP().contains(".")){
+            return "http://" + physicalMachine.getAddressIP() + ":"
+                    + physicalMachine.getPortOfVTWebServer();
+        }
+        
+        return "http://[" + physicalMachine.getAddressIP() + "]:"
+                + physicalMachine.getPortOfVTWebServer();
+    }
 }

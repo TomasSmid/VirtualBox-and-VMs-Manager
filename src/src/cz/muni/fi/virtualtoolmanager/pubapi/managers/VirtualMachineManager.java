@@ -17,6 +17,7 @@ package cz.muni.fi.virtualtoolmanager.pubapi.managers;
 
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PortRule;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
+import cz.muni.fi.virtualtoolmanager.pubapi.types.FrontEndType;
 import java.util.List;
 
 /**
@@ -25,7 +26,7 @@ import java.util.List;
  */
 public interface VirtualMachineManager {
     
-    public void startVM(VirtualMachine virtualMachine);
+    public void startVM(VirtualMachine virtualMachine, FrontEndType frontEndType);
     
     public void shutDownVM(VirtualMachine virtualMachine);
     

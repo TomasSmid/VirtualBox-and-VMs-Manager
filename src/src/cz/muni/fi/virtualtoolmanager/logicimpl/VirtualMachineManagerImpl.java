@@ -23,6 +23,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownPortRuleException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager;
+import cz.muni.fi.virtualtoolmanager.pubapi.types.FrontEndType;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.ProtocolType;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -36,13 +37,19 @@ import java.util.List;
 public class VirtualMachineManagerImpl implements VirtualMachineManager{
     
     @Override
-    public void startVM(VirtualMachine virtualMachine) {
+    public void startVM(VirtualMachine virtualMachine, FrontEndType frontEndType) {
         OutputHandler outputHandler = new OutputHandler();
         
         if(virtualMachine == null){
             outputHandler.printErrorMessage("Virtual machine starting operation "
                     + "failure: There was made an attempt to start a null virtual "
                     + "machine.");
+            return;
+        }
+        
+        if(frontEndType == null){
+            outputHandler.printErrorMessage("Virtual machine starting operation "
+                    + "failure: There was specified a null guest front-end type.");
             return;
         }
         
@@ -59,7 +66,7 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
         
         NativeVBoxAPIMachine nativeVBoxAPIMachine = new NativeVBoxAPIMachine();
         try{
-            nativeVBoxAPIMachine.startVM(virtualMachine);
+            nativeVBoxAPIMachine.startVM(virtualMachine, frontEndType);
         } catch (UnknownVirtualMachineException | UnexpectedVMStateException ex) {
             outputHandler.printErrorMessage(ex.getMessage());
             return;

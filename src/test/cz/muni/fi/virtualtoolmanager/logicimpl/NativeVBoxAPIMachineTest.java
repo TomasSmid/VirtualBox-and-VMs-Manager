@@ -22,6 +22,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureExceptio
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownPortRuleException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException;
+import cz.muni.fi.virtualtoolmanager.pubapi.types.FrontEndType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -124,7 +125,7 @@ public class NativeVBoxAPIMachineTest {
        when(progressMock.getResultCode()).thenReturn(0);
        
        //there should not appear any exception nor error
-       sut.startVM(vm);       
+       sut.startVM(vm, FrontEndType.GUI);       
     }
     
     /**
@@ -171,7 +172,7 @@ public class NativeVBoxAPIMachineTest {
        when(progressMock.getResultCode()).thenReturn(-421548);
        
        exception.expect(UnexpectedVMStateException.class);
-       sut.startVM(vm);
+       sut.startVM(vm, FrontEndType.GUI);
     }
     
     /**
@@ -195,7 +196,7 @@ public class NativeVBoxAPIMachineTest {
        doThrow(VBoxException.class).when(vboxMock).findMachine(vm.getId().toString());
        
        exception.expect(UnknownVirtualMachineException.class);
-       sut.startVM(vm);
+       sut.startVM(vm, FrontEndType.GUI);
     }
     
     /**
@@ -227,7 +228,7 @@ public class NativeVBoxAPIMachineTest {
        when(vboxMachineMock.getAccessError()).thenReturn(vboxErrInfoMock);
        
        exception.expect(UnexpectedVMStateException.class);
-       sut.startVM(vm);
+       sut.startVM(vm, FrontEndType.GUI);
     }
     
     /**
@@ -260,7 +261,7 @@ public class NativeVBoxAPIMachineTest {
        when(vboxMachineMock.getState()).thenReturn(MachineState.Running);
        
        exception.expect(UnexpectedVMStateException.class);
-       sut.startVM(vm);
+       sut.startVM(vm, FrontEndType.GUI);
     }
     
     /**
@@ -293,7 +294,7 @@ public class NativeVBoxAPIMachineTest {
        when(vboxMachineMock.getState()).thenReturn(MachineState.Paused);
        
        exception.expect(UnexpectedVMStateException.class);
-       sut.startVM(vm);
+       sut.startVM(vm, FrontEndType.GUI);
     }
     
     /**
@@ -333,7 +334,7 @@ public class NativeVBoxAPIMachineTest {
        doThrow(VBoxException.class).when(vboxMachineMock).launchVMProcess(sessionMocked, "gui", "");
        
        exception.expect(UnexpectedVMStateException.class);
-       sut.startVM(vm);
+       sut.startVM(vm, FrontEndType.GUI);
     }
     
     /**
@@ -357,7 +358,7 @@ public class NativeVBoxAPIMachineTest {
        doThrow(VBoxException.class).when(vbmMock).connect(url, username, userPassword);
        
        exception.expect(ConnectionFailureException.class);
-       sut.startVM(vm);
+       sut.startVM(vm, FrontEndType.GUI);
     }
     
     /**

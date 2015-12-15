@@ -64,7 +64,7 @@ class NativeVBoxAPIManager {
      */
     public boolean registerVirtualMachine(PhysicalMachine physicalMachine, String name) throws ConnectionFailureException,
                                                                                                UnknownVirtualMachineException {
-        String url = "http://" + physicalMachine.getAddressIP() + ":" + physicalMachine.getPortOfVTWebServer();
+        String url = getURL(physicalMachine);
         boolean vmIsRegistered = true;
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         
@@ -126,7 +126,7 @@ class NativeVBoxAPIManager {
      */
     public VirtualMachine getVirtualMachine(PhysicalMachine physicalMachine, String nameOrId) throws ConnectionFailureException,
                                                                                                      UnknownVirtualMachineException {
-        String url = "http://" + physicalMachine.getAddressIP() + ":" + physicalMachine.getPortOfVTWebServer();
+        String url = getURL(physicalMachine);
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         
         try{
@@ -158,7 +158,7 @@ class NativeVBoxAPIManager {
     
     public List<VirtualMachine> getAllVirtualMachines(PhysicalMachine physicalMachine) throws ConnectionFailureException,
                                                                                               UnknownVirtualMachineException {
-        String url = "http://" + physicalMachine.getAddressIP() + ":" + physicalMachine.getPortOfVTWebServer();
+        String url = getURL(physicalMachine);
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         
         try{
@@ -199,8 +199,7 @@ class NativeVBoxAPIManager {
     public void removeVirtualMachine(VirtualMachine virtualMachine) throws ConnectionFailureException,
                                                                            UnknownVirtualMachineException,
                                                                            UnexpectedVMStateException {
-        String url = "http://" + virtualMachine.getHostMachine().getAddressIP() + ":" 
-                + virtualMachine.getHostMachine().getPortOfVTWebServer();
+        String url = getURL(virtualMachine.getHostMachine());
         String username = virtualMachine.getHostMachine().getUsername();
         String userPassword = virtualMachine.getHostMachine().getUserPassword();
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
@@ -269,8 +268,7 @@ class NativeVBoxAPIManager {
     public VirtualMachine createVMClone(VirtualMachine virtualMachine, CloneType cloneType) throws ConnectionFailureException,
                                                                                                    UnknownVirtualMachineException,
                                                                                                    UnexpectedVMStateException {
-        String url = "http://" + virtualMachine.getHostMachine().getAddressIP() + ":" 
-                + virtualMachine.getHostMachine().getPortOfVTWebServer();
+        String url = getURL(virtualMachine.getHostMachine());
         String username = virtualMachine.getHostMachine().getUsername();
         String userPassword = virtualMachine.getHostMachine().getUserPassword();
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
@@ -418,6 +416,16 @@ class NativeVBoxAPIManager {
                                /* 14 */ "Virtual machine cloning operation failure: "};//error info from VBox API should follow
         
         return errMessages[index];
+    }
+    
+    private String getURL(PhysicalMachine physicalMachine){
+        if(physicalMachine.getAddressIP().contains(".")){
+            return "http://" + physicalMachine.getAddressIP() + ":"
+                    + physicalMachine.getPortOfVTWebServer();
+        }
+        
+        return "http://[" + physicalMachine.getAddressIP() + "]:"
+                + physicalMachine.getPortOfVTWebServer();
     }
     
     private IMedium getVMHardDisk(IMachine vboxMachine){
