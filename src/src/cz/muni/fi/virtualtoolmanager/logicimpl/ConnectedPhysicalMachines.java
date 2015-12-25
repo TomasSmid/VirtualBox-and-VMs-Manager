@@ -26,26 +26,10 @@ import java.util.List;
 public class ConnectedPhysicalMachines {
     
     private static final ConnectedPhysicalMachines INSTANCE = new ConnectedPhysicalMachines();
-    private static List<PhysicalMachine> connectedPhysicalMachines = new ArrayList<>();
+    private List<PhysicalMachine> connectedPhysicalMachines = new ArrayList<>();
     
     public static ConnectedPhysicalMachines getInstance(){
         return INSTANCE;
-    }
-    
-    private static void addCPM(PhysicalMachine physicalMachine){
-        connectedPhysicalMachines.add(physicalMachine);
-    }
-    
-    private static boolean removeCPM(PhysicalMachine physicalMachine){       
-        return connectedPhysicalMachines.remove(physicalMachine);        
-    }
-    
-    private static boolean isConnectedPM(PhysicalMachine physicalMachine){
-        return connectedPhysicalMachines.contains(physicalMachine);
-    }
-    
-    private static List<PhysicalMachine> getConnectedPMs(){
-        return connectedPhysicalMachines;
     }
     
     private ConnectedPhysicalMachines(){ }
@@ -57,7 +41,7 @@ public class ConnectedPhysicalMachines {
                             + "physical machines.");
         }
         
-        addCPM(physicalMachine);
+        connectedPhysicalMachines.add(physicalMachine);
     }
     
     public boolean remove(PhysicalMachine physicalMachine){
@@ -67,7 +51,7 @@ public class ConnectedPhysicalMachines {
                             + "physical machines.");
         }
         
-        return removeCPM(physicalMachine);
+        return connectedPhysicalMachines.remove(physicalMachine);
     }
     
     public boolean isConnected(PhysicalMachine physicalMachine){
@@ -76,10 +60,10 @@ public class ConnectedPhysicalMachines {
                             + "out if a null physical machine is connected.");
         }
         
-        return isConnectedPM(physicalMachine);
+        return connectedPhysicalMachines.contains(physicalMachine);
     }
     
     public List<PhysicalMachine> getConnectedPhysicalMachines(){
-        return getConnectedPMs();
+        return connectedPhysicalMachines;
     }
 }
