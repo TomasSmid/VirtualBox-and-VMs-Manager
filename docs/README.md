@@ -1,1 +1,1 @@
-In this folder "docs" will be added a whole source code documentation and a complex design of the API very soon.
+project docs
