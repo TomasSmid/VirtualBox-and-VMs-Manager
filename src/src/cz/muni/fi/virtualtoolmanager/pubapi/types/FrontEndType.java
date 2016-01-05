@@ -16,10 +16,18 @@
 package cz.muni.fi.virtualtoolmanager.pubapi.types;
 
 /**
- *
+ * Enumeration class that is used for determining in what mode will be
+ * a particular virtual machine started.
+ * 
+ * @see cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager
+ * @see cz.muni.fi.virtualtoolmanager.logicimpl.VirtualMachineManagerImpl
+ * 
  * @author Tomáš Šmíd
  */
 public enum FrontEndType {
+    /** virtual machine will be provide output in a graphical user interface 
+     * on its host machine */
     GUI,
+    /** virtual machine will not be provide any visible output on its host machine */
     HEADLESS
 }

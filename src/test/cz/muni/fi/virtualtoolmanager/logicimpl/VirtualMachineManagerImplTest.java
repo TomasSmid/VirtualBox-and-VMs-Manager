@@ -15,7 +15,7 @@
  */
 package cz.muni.fi.virtualtoolmanager.logicimpl;
 
-import cz.muni.fi.virtualtoolmanager.io.OutputHandler;
+import cz.muni.fi.virtualtoolmanager.pubapi.io.OutputHandler;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PortRule;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
@@ -27,6 +27,7 @@ import cz.muni.fi.virtualtoolmanager.pubapi.types.FrontEndType;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.ProtocolType;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,6 +38,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -60,6 +63,9 @@ import org.powermock.modules.junit4.PowerMockRunner;
 @PrepareForTest({VirtualMachineManagerImpl.class, NativeVBoxAPIMachine.class, ConnectionManagerImpl.class})
 public class VirtualMachineManagerImplTest {
 
+    @Rule
+    ExpectedException exception = ExpectedException.none();
+    
     private VirtualMachineManagerImpl sut;
     private NativeVBoxAPIMachine natAPIMachMock;
     private ConnectionManagerImpl conManMock;
@@ -106,120 +112,81 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a null virtual machine argument then the virtual machine
-     * start-up operation itself is not even started and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to start a null virtual machine.
      */
     @Test
-    public void startNullVM() throws Exception {
-
+    public void startNullVM(){
+        exception.expect(IllegalArgumentException.class);
         sut.startVM(null, FrontEndType.GUI);
-
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a null virtual machine", errContent.toString().isEmpty());
+        
         //checks the method NativeVBoxAPIMachine::startVM() has never been called as expected
         verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class), any(FrontEndType.class));
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a null front-end type argument then the virtual machine
-     * start-up operation itself is not even started and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to start a virtual machine with a null front-end type.
      */
     @Test
-    public void startVMWithNullFrontEndType() throws Exception {
+    public void startVMWithNullFrontEndType(){
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.startVM(vm, null);
-
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was specified a null "
-                + "guest front-end type", errContent.toString().isEmpty());
+        
         //checks the method NativeVBoxAPIMachine::startVM() has never been called as expected
         verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class), any(FrontEndType.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a virtual machine which does not exist then the start-up
-     * operation is ended and on a standard error output appears an error
-     * informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnknownVirtualMachineException when
+     * there is made an attempt to start a non-existent virtual machine.
      */
     @Test
-    public void startNonexistentVM() throws Exception {
+    public void startNonexistentVM(){
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
-        //mock object of type UnknownVirtualMachineException for better test control
-        UnknownVirtualMachineException unVirtMachExMock = mock(UnknownVirtualMachineException.class);
+        UnknownVirtualMachineException unknownVMExMock =
+                mock(UnknownVirtualMachineException.class);
 
        //there should be returned a positive answer which means the host machine
         //is connected and therefore there is possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(true);
-       //there should be thrown the UnknownVirtualMachineException exception when
-        //the method NativeVBoxAPIMachine::startVM() is called with a required virtual machine
-        //and means that the virtual machine does not exist and cannot be started
-        doThrow(unVirtMachExMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
-        //there should be returned a non-empty string value when the method UnknownVirtualMachineException::getMessage() is called
-        when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
+        doThrow(unknownVMExMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
 
+        exception.expect(UnknownVirtualMachineException.class);
         sut.startVM(vm, FrontEndType.GUI);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine which does not exist", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a virtual machine which is not accessible (probably its
-     * source files are missing or corrupted) then the start-up operation is
-     * ended and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when there
+     * is made an attempt to start an inaccessible virtual machine.
      */
     @Test
-    public void startInaccessibleVM() throws Exception {
+    public void startInaccessibleVM(){
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
-        //mock object of type UnexpectedVMStateException for better test control
-        UnexpectedVMStateException unexVMStateMock = mock(UnexpectedVMStateException.class);
-
+        UnexpectedVMStateException unexpVMStateMock =
+                mock(UnexpectedVMStateException.class);
+        
        //there should be returned a positive answer which means the host machine
         //is connected and therefore there is possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(true);
-       //there should be thrown the UnexpectedVMStateException exception when
-        //the method NativeVBoxAPIMachine::startVM() is called with a required virtual machine
-        //and means that the virtual machine's source files are missing or corrupted
-        //and cannot be started
-        doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
-        //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
-        when(unexVMStateMock.getMessage()).thenReturn("Any error message");
+        doThrow(unexpVMStateMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
         
+        exception.expect(UnexpectedVMStateException.class);
         sut.startVM(vm, FrontEndType.GUI);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine which is not accessible", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a virtual machine which is not in a required state (is in
-     * invalid state "Running" or "Paused") then the start-up operation is ended
-     * and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when there
+     * is made an attempt to start a virtual machine which is not in a required
+     * state for virtual machine starting operation.
      */
     @Test
-    public void startVMWithInvalidState() throws Exception {
+    public void startVMWithInvalidState(){
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnexpectedVMStateException for better test control
@@ -233,26 +200,19 @@ public class VirtualMachineManagerImplTest {
         //and means that the virtual machine has already been started, because the only
         //invalid states are "Running" and "Paused" and therefore cannot be started again
         doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
-        //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
-        when(unexVMStateMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(UnexpectedVMStateException.class);
         sut.startVM(vm, FrontEndType.GUI);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine which is not in a required state for start-up", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a virtual machine which is already locked (there exists
-     * another process which is working with the virtual machine now) then the
-     * start-up operation is ended and on a standard error output appears an
-     * error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when
+     * there is made an attempt to start a virtual machine which is already
+     * locked (there exists another process which is working with the virtual
+     * machine at the same moment).
      */
     @Test
-    public void startAlreadyLockedVM() throws Exception {
+    public void startAlreadyLockedVM(){
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnexpectedVMStateException for better test control
@@ -266,27 +226,18 @@ public class VirtualMachineManagerImplTest {
         //and means that the virtual machine is being used by another process now
         //which has the lock on the virtual machine
         doThrow(unexVMStateMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
-        //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
-        when(unexVMStateMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(UnexpectedVMStateException.class);
         sut.startVM(vm, FrontEndType.GUI);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine which is already being used by another process",
-                errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a virtual machine which should be started on a physical
-     * machine which is not connected then the virtual machine start-up operation
-     * itself is not even started and on a standard error output appears an error
-     * informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to start a virtual machine which is located on
+     * a not connected physical machine.
      */
     @Test
-    public void startVMOnDisconnectedPhysicalMachine() throws Exception {
+    public void startVMOnDisconnectedPhysicalMachine(){
         //represents a virtual machine which should be started
         VirtualMachine vm = new VMBuilder().build();
 
@@ -294,25 +245,18 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
+        exception.expect(ConnectionFailureException.class);
         sut.startVM(vm, FrontEndType.GUI);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine on a physical machine which is not connected",
-                errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::startVM() has never been called as expected
         verify(natAPIMachMock, never()).startVM(any(VirtualMachine.class), any(FrontEndType.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::startVM()
-     * is called with a virtual machine which should be started on a physical
-     * machine which should be connected, but there occured any connection
-     * problem at the start-up operation beginning (when the VirtualBoxManager
-     * instance is connecting to VirtualBox) then the start-up operation is ended
-     * and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there occurs some connection problem during virtual machine starting
+     * operation. Also check the disconnection operation is called as a reaction
+     * to the connection failure.
      */
     @Test
     public void startVMWithSuddenNetworkConnectionLoss() throws Exception {
@@ -329,13 +273,10 @@ public class VirtualMachineManagerImplTest {
         //and means that there occured any connection problem at the beginning
         //of the start-up operation
         doThrow(conFailExMock).when(natAPIMachMock).startVM(vm, FrontEndType.GUI);
-        //there should be returned a non-empty string value when the method ConnectionFailureException::getMessage() is called
-        when(conFailExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(ConnectionFailureException.class);
         sut.startVM(vm, FrontEndType.GUI);
         
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
         verify(conManMock).disconnectFrom(vm.getHostMachine());
     }
@@ -364,35 +305,24 @@ public class VirtualMachineManagerImplTest {
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::shutDownVM()
-     * is called with a null virtual machine argument then the virtual machine
-     * shutdown operation itself is not even started and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to shut down a null virtual machine.
      */
     @Test
-    public void shutDownNullVM() throws Exception {
-
+    public void shutDownNullVM(){
+        exception.expect(IllegalArgumentException.class);
         sut.shutDownVM(null);
-
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to shut down a null virtual machine", errContent.toString().isEmpty());
+        
         //checks the method NativeVBoxAPIMachine::shutDownVM() has never been called as expected
         verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::shutDownVM()
-     * is called with a virtual machine which does not exist then the shutdown
-     * operation is ended and on a standard error output appears an error
-     * informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UneknownVirtualMachineException
+     * when there is made an attempt to shut down an unknown virtual machine.
      */
     @Test
-    public void shutDownNonexistentVM() throws Exception {
+    public void shutDownNonexistentVM(){
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnknownVirtualMachineException for better test control
@@ -405,25 +335,17 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::shutDownVM() is called with a required virtual machine
         //and means that the virtual machine does not exist and cannot be shut down
         doThrow(unVirtMachExMock).when(natAPIMachMock).shutDownVM(vm);
-        //there should be returned a non-empty string value when the method UnknownVirtualMachineException::getMessage() is called
-        when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(UnknownVirtualMachineException.class);
         sut.shutDownVM(vm);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to shut down a virtual machine which does not exist", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::shutDownVM()
-     * is called with a virtual machine which is not accessible (probably its
-     * source files are missing or corrupted) then the shutdown operation is
-     * ended and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when
+     * there is made an attempt to shut down an inaccessible virtual machine.
      */
     @Test
-    public void shutDownInaccessibleVM() throws Exception {
+    public void shutDownInaccessibleVM(){
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnexpectedVMStateException for better test control
@@ -437,25 +359,18 @@ public class VirtualMachineManagerImplTest {
         //and means that the virtual machine's source files are missing or corrupted
         //and cannot be shut down
         doThrow(unexVMStateExMock).when(natAPIMachMock).shutDownVM(vm);
-        //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
-        when(unexVMStateExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(UnexpectedVMStateException.class);
         sut.shutDownVM(vm);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to shut down a virtual machine which is not accessible", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::shutDownVM()
-     * is called with a virtual machine which is not in a required state (is not
-     * in one of valid states "Running", "Paused" or "Stuck") then the shutdown
-     * operation is ended and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when there
+     * is made an attempt to shut down a virtual machine which is not in a required
+     * state for virtual machine shutdown operation.
      */
     @Test
-    public void shutDownVMWithInvalidState() throws Exception {
+    public void shutDownVMWithInvalidState(){
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnexpectedVMStateException for better test control
@@ -470,26 +385,18 @@ public class VirtualMachineManagerImplTest {
         //because the only valid states are "Running", "Paused" or "Stuck" and all another states are
         //invalid
         doThrow(unexVMStateExMock).when(natAPIMachMock).shutDownVM(vm);
-        //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
-        when(unexVMStateExMock.getMessage()).thenReturn("Any error message");
-
-        sut.shutDownVM(vm);
         
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to shut down a virtual machine which is not in a required state for shutdown", errContent.toString().isEmpty());
+        exception.expect(UnexpectedVMStateException.class);
+        sut.shutDownVM(vm);
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::shutDownVM()
-     * is called with a virtual machine which should be started on a physical
-     * machine which is not connected then the virtual machine shutdown operation
-     * itself is not even started and on a standard error output appears an error
-     * informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to shut down a virtual machine which is located
+     * on a not connected physical machine.
      */
     @Test
-    public void shutDownVMOnDisconnectedPhysicalMachine() throws Exception {
+    public void shutDownVMOnDisconnectedPhysicalMachine(){
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
 
@@ -497,28 +404,21 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
+        exception.expect(ConnectionFailureException.class);
         sut.shutDownVM(vm);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to shut down a virtual machine on a physical machine which is not connected",
-                errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::shutDownVM() has never been called as expected
         verify(natAPIMachMock, never()).shutDownVM(any(VirtualMachine.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::shutDownVM()
-     * is called with a virtual machine which should be shut down on a physical
-     * machine which should be connected, but there occured any connection
-     * problem at the shutdown operation beginning (when the VirtualBoxManager
-     * instance is connecting to VirtualBox) then the shutdown operation is ended
-     * and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there occurs some connection problem during virtual machine shutdown
+     * operation. Also check the disconnection operation is called as a reaction
+     * to the connection problem.
      */
     @Test
-    public void shutDownVMWithSuddenNetworkConnectionLoss() throws Exception {
+    public void shutDownVMWithSuddenNetworkConnectionLoss(){
         //represents a virtual machine which should be shut down
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type ConnectionFailureException for better test control
@@ -532,13 +432,10 @@ public class VirtualMachineManagerImplTest {
         //and means that there occured any connection problem at the beginning
         //of the shutdown operation
         doThrow(conFailExMock).when(natAPIMachMock).shutDownVM(vm);
-        //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
-        when(conFailExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(ConnectionFailureException.class);
         sut.shutDownVM(vm);
         
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
         verify(conManMock).disconnectFrom(vm.getHostMachine());
     }
@@ -547,11 +444,9 @@ public class VirtualMachineManagerImplTest {
      * This test tests that if there are all neccessary conditions for new
      * port rule addition operation met then the operation is performed successfully
      * and on a standard output appears an informing message about that.
-     * 
-     * @throws java.lang.Exception
      */
     @Test
-    public void addPortRuleIdealCase() throws Exception {
+    public void addPortRuleIdealCase(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -573,37 +468,29 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a null virtual machine then the new port rule addition operation
-     * itself is not even started and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a new port-forwarding rule to a null virtual
+     * machine.
      */
     @Test
     public void addPortRuleWithNullVirtualMachine() throws Exception {
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01",22,1540).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(null, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule to a null virtual machine", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
     
     /**
-     * This test tests that if the method NativeVBoxAPIMachine::getPortRules() is
-     * called as part of the method VirtualMachineManagerImpl::addPortRule() with
-     * a virtual machine which does not exist then the new port rule addition 
-     * operation is ended and on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnknownVirtualMachineException when
+     * there is made an attempt to get all port rules from a non-existent VM for
+     * check duplicity reasons.
      */
     @Test
-    public void addPortRuleWithNonexistentVMGetter() throws Exception {
+    public void addPortRuleWithNonexistentVMGetter(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -619,29 +506,21 @@ public class VirtualMachineManagerImplTest {
         //virtual machine and means that the virtual machine does not exist and
         //port rules cannot got and used for new port rule name and host port duplicity
         doThrow(unVirtMachExMock).when(natAPIMachMock).getPortRules(vm);
-        //there should be returned a non-empty string value containing sequence "There is no virtual machine"
-        when(unVirtMachExMock.getMessage()).thenReturn("failure: There is no virtual machine ...");
         
+        exception.expect(UnknownVirtualMachineException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule to a virtual machine which does not exist",
-                    errContent.toString().isEmpty());
         //check the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a virtual machine which does not exist then the new port rule
-     * addition operation is ended and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnknownVirtualMachineException when
+     * there is made an attempt to add a new port-forwarding rule to an unknown
+     * virtual machine.
      */
     @Test
-    public void addPortRuleWithNonexistentVMAddition() throws Exception {
+    public void addPortRuleWithNonexistentVMAddition(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -657,246 +536,188 @@ public class VirtualMachineManagerImplTest {
         //virtual machine and port rule and means that the virtual machine does not
         //exist and the port rule cannot be added to that virtual machine
         doThrow(unVirtMachExMock).when(natAPIMachMock).addPortRule(vm, portRule);
-        //there should be returned a non-empty string value
-        when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
         
+        exception.expect(UnknownVirtualMachineException.class);
         sut.addPortRule(vm, portRule);
-                
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule to a virtual machine which does not exist",
-                    errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a null port rule then the new port rule addition operation
-     * itself is not even started and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a null port rule as a new port-forwarding rule
+     * to a virtual machine.
      */
     @Test
-    public void addNullPortRule() throws Exception {
+    public void addNullPortRule(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, null);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a null port rule to a virtual machine", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has a null name then the new port rule addition
-     * operation itself is not even started and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with no specified (null) name as a
+     * new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithNullName() throws Exception {
+    public void addPortRuleWithNullName(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder(null, 22, 1540).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with a null name to a virtual machine", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has an empty name then the new port rule addition
-     * operation itself is not even started and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with an empty name as a new
+     * port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithEmptyName() throws Exception {
+    public void addPortRuleWithEmptyName(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("", 22, 1540).build();
-        
+    
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with an empty name to a virtual machine", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has the host port number smaller than 0
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a negative host port number as
+     * a new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithInvalidHostPortNumberNegative() throws Exception {
+    public void addPortRuleWithInvalidHostPortNumberNegative(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01", -1, 1540).build();
-        
+    
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with a negative host port number to a virtual machine",
-                    errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has the host port number equal to 0
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a host port number equal to 0
+     * as a new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithInvalidHostPortNumberZero() throws Exception {
+    public void addPortRuleWithInvalidHostPortNumberZero(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01", 0, 1540).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with a zero host port number to a virtual machine",
-                    errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has the host port number bigger than 65535
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a too big host port number
+     * (bigger than 65535) as a new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithInvalidHostPortNumberTooBig() throws Exception {
+    public void addPortRuleWithInvalidHostPortNumberTooBig(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01", 65536, 1540).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with a too big host port number to a virtual machine",
-                    errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has the guest port number smaller than 0
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a negative guest port number as
+     * a new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithInvalidGuestPortNumberNegative() throws Exception {
+    public void addPortRuleWithInvalidGuestPortNumberNegative(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01", 22, -1).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with a negative guest port number to a virtual machine",
-                    errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has the guest port number equal to 0
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a guest port number equal to 0
+     * as a new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithInvalidGuestPortNumberZero() throws Exception {
+    public void addPortRuleWithInvalidGuestPortNumberZero(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01", 22, 0).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with a zero guest port number to a virtual machine",
-                    errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which has the guest port number bigger than 65535
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a too big host port number
+     * (bigger than 65535) as a new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithInvalidGuestPortNumberTooBig() throws Exception {
+    public void addPortRuleWithInvalidGuestPortNumberTooBig(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01", 22, 65536).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a port rule with a too big guest port number to a virtual machine",
-                    errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which name is used by another active port rule
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a duplicit name (name, which
+     * is used for another already existing port-forwarding rule) as a new
+     * port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithDuplicitName() throws Exception {
+    public void addPortRuleWithDuplicitName(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -911,25 +732,21 @@ public class VirtualMachineManagerImplTest {
         //port rule which has the same name as a port rule which should be newly added
         when(natAPIMachMock.getPortRules(vm)).thenReturn(portRules);
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule with a duplicit name", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a port rule which host port number is used by another active port rule
-     * then the new port rule addition operation itself is not even started and
-     * on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to add a port rule with a duplicit host port number
+     * (port number, which is used for another already existing port-forwarding
+     * rule) as a new port-forwarding rule to a virtual machine.
      */
     @Test
-    public void addPortRuleWithDuplicitHostPortNumber() throws Exception {
+    public void addPortRuleWithDuplicitHostPortNumber(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -944,26 +761,20 @@ public class VirtualMachineManagerImplTest {
         //port rule which has the same host port number as a port rule which should be newly added
         when(natAPIMachMock.getPortRules(vm)).thenReturn(portRules);
         
+        exception.expect(IllegalArgumentException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule with a duplicit host port number", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a virtual machine which has not set up a required network
-     * attachment type (NAT network attachment type) then the new port rule
-     * addition operation is ended and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when
+     * there is made an attempt to add a new port-forwarding rule to a virtual
+     * machine which is not using NAT network adapter.
      */
     @Test
-    public void addPortRuleWithInvalidAttachmentType() throws Exception {
+    public void addPortRuleWithInvalidAttachmentType(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -981,27 +792,20 @@ public class VirtualMachineManagerImplTest {
         //NativeVBoxAPIMachine::addPortRule() is called with a required virtual machine
         //which has not set up a valid network attachment type
         doThrow(unexVMStateExMock).when(natAPIMachMock).addPortRule(vm, portRule);
-        //there should be returned a non-empty string value
-        when(unexVMStateExMock.getMessage()).thenReturn("Any error message");
         
+        exception.expect(UnexpectedVMStateException.class);
         sut.addPortRule(vm, portRule);
-                
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule to a virtual machine with an invalid network attachment type",
-                    errContent.toString().isEmpty());
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule() is
-     * called with a virtual machine which has not set up a required network
-     * attachment type (NAT network attachment type) then the new port rule
-     * addition operation is ended and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when
+     * there is made an attempt to add a new port-forwarding rule to a virtual
+     * machine which is not using NAT network adapter and this state is found
+     * during retrieving all existing port rules for name and host port number
+     * duplicity check.
      */
     @Test
-    public void addPortRuleWithInvalidAttachmentTypeGetter() throws Exception {
+    public void addPortRuleWithInvalidAttachmentTypeGetter(){
         //represents a virtual machine to which a new port rule should be added
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1019,27 +823,20 @@ public class VirtualMachineManagerImplTest {
         //NativeVBoxAPIMachine::addPortRule() is called with a required virtual machine
         //which has not set up a valid network attachment type
         doThrow(unexVMStateExMock).when(natAPIMachMock).addPortRule(vm, portRule);
-        //there should be returned a non-empty string value containing sequence "bad network adapter"
-        when(unexVMStateExMock.getMessage()).thenReturn("bad network adapter");
         
+        exception.expect(UnexpectedVMStateException.class);
         sut.addPortRule(vm, portRule);
-                
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule to a virtual machine with an invalid network attachment type",
-                    errContent.toString().isEmpty());
+        
+        verify(natAPIMachMock, never()).addPortRule(vm, portRule);
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule()
-     * is called with a virtual machine to which should be added a new port rule
-     * and which is located on a physical machine which is not connected then the
-     * new port rule addition operation itself is not even started and on a standard
-     * error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when there
+     * is made an attempt to add a new port-forwarding rule to a virtual machine
+     * whose host machine is not connected.
      */
     @Test
-    public void addPortRuleOnDisconnectedPhysicalMachine() throws Exception {
+    public void addPortRuleOnDisconnectedPhysicalMachine(){
         //represents a virtual machine to which should be added a new port rule        
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1049,29 +846,23 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
+        exception.expect(ConnectionFailureException.class);
         sut.addPortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to add a new port rule to a virtual machine on a physical machine which is not connected",
-                errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule()
-     * is called with a virtual machine to which should be added a new port rule
-     * and which is located on a physical machine which should be connected, but
-     * there occured any connection problem while there are being got an active
-     * existent port rules from the required virtual machine (when the VirtualBoxManager
-     * instance is connecting to VirtualBox) then the new port rule addition operation
-     * iself is not even started and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to add a new port-forwarding rule to a virtual
+     * machine with whose host machine is lost the connection during the retrieving
+     * all port rules for name and host port number duplicity check. Also check
+     * there is performed disconnection operation as a reaction to the connection
+     * failure.
      */
     @Test
-    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckGetter() throws Exception {        
+    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckGetter(){        
         //represents a virtual machine to which should be added a new port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1086,14 +877,10 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::getPortRules() is called with a required virtual machine
         //and means that there occured any connection problem and port rules cannot be retrived
         doThrow(conFailExMock).when(natAPIMachMock).getPortRules(vm);
-        //there should be returned a non-empty string containg sequence "Connection operation failure"
-        when(conFailExMock.getMessage()).thenReturn("Connection operation failure");
 
+        exception.expect(ConnectionFailureException.class);
         sut.addPortRule(vm, portRule);
-
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
+        
         //checks the method NativeVBoxAPIMachine::addPortRule() has never been called as expected
         verify(natAPIMachMock, never()).addPortRule(any(VirtualMachine.class), any(PortRule.class));
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
@@ -1101,18 +888,15 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::addPortRule()
-     * is called with a virtual machine to which should be added a new port rule
-     * and which is located on a physical machine which should be connected, but
-     * there occured any connection problem at the addition operation itself
-     * beginning (when the VirtualBoxManager instance is connecting to VirtualBox)
-     * then the new port rule addition operation is ended and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to add a new port-forwarding rule to a virtual
+     * machine with whose host machine is lost a connection while there is being
+     * processed the new port-forwarding rule addition operation itself. Also
+     * check there is performed disconnection operation as a reaction to the
+     * connection failure.
      */
     @Test
-    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckAddition() throws Exception {
+    public void addPortRuleWithSuddenNetworkConnectionLossInnerCheckAddition(){
         //represents a virtual machine to which should be added a new port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be added to the virtual machine vm
@@ -1127,14 +911,11 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::addPortRule() is called with a required virtual machine
         //and means that there occured any connection problem and a new port rule cannot be added
         //to the virtual machine
-        doThrow(conFailExMock).when(natAPIMachMock).addPortRule(vm, portRule);        
-        //there should be returned a non-empty string containg sequence "Connection operation failure"
-        when(conFailExMock.getMessage()).thenReturn("Connection operation failure");
+        doThrow(conFailExMock).when(natAPIMachMock).addPortRule(vm, portRule);
 
+        exception.expect(ConnectionFailureException.class);
         sut.addPortRule(vm, portRule);
         
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
         verify(conManMock).disconnectFrom(vm.getHostMachine());
     }
@@ -1158,135 +939,111 @@ public class VirtualMachineManagerImplTest {
         //there should not appear any exception nor error
         sut.deletePortRule(vm, portRule);
 
-        assertFalse("There should be written a message on a standard output that the particular "
-                + "port rule was successfully deleted  from the particular virtual machine", outContent.toString().isEmpty());
-        assertTrue("There should not be written a message on a standard error output", errContent.toString().isEmpty());
+        assertFalse("There should be written a message on a standard output that"
+                + "the particular port rule was successfully deleted  from the "
+                + "particular virtual machine", outContent.toString().isEmpty());
+        assertTrue("There should not be written a message on a standard error "
+                + "output", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a null virtual machine then the port rule deletion operation
-     * itself is not even started and on a standard error output appears an
-     * informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to delete a port rule from a null virtual machine.
      */
     @Test
-    public void deletePortRuleWithNullVirtualMachine() throws Exception {
+    public void deletePortRuleWithNullVirtualMachine(){
         //represents a new port rule which should be deleted from the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01",22,1540).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.deletePortRule(null, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a port rule from a null virtual machine", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::deletePortRule() has never been called as expected
         verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a virtual machine which does not exist then the port rule
-     * deletion operation itself is not even started and on a standard error output
-     * appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnknownVirtualMachineException when
+     * there is made an attempt to delete a port rule from a non-existent
+     * virtual machine.
      */
     @Test
-    public void deletePortRuleWithNonexistentVM() throws Exception {
+    public void deletePortRuleWithNonexistentVM(){
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
         PortRule portRule = new PortRule.Builder("PortRule_01",22,1540).build();
+        UnknownVirtualMachineException unknownVMExMock =
+                mock(UnknownVirtualMachineException.class);
         
+        when(conManMock.isConnected(vm.getHostMachine())).thenReturn(true);
+        doThrow(unknownVMExMock).when(natAPIMachMock).deletePortRule(vm, portRule.getName());
+        
+        exception.expect(UnknownVirtualMachineException.class);
         sut.deletePortRule(vm, portRule);
-
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a port rule from a virtual machine which does not exist", errContent.toString().isEmpty());
-        //checks the method NativeVBoxAPIMachine::deletePortRule() has never been called as expected
-        verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a null port rule then the port rule deletion operation itself
-     * is not even started and on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to delete a null port rule from a virtual machine.
      */
     @Test
-    public void deleteNullPortRule() throws Exception {
+    public void deleteNullPortRule(){
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.deletePortRule(vm, null);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a null port rule", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::deletePortRule() has never been called as expected
         verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a port rule which has a null name then the port rule
-     * deletion operation itself is not even started and on a standard error output
-     * appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to delete a port rule with a null name from a virtual
+     * machine.
      */
     @Test
-    public void deletePortRuleWithNullName() throws Exception {
+    public void deletePortRuleWithNullName(){
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
         PortRule portRule = new PortRule.Builder(null,22,1540).build();
         
+        exception.expect(IllegalArgumentException.class);
         sut.deletePortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a port rule with a null name", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::deletePortRule() has never been called as expected
         verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a port rule which has an empty name then the port rule
-     * deletion operation itself is not even started and on a standard error output
-     * appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to delete a port rule with an empty name from a virtual
+     * machine.
      */
     @Test
-    public void deletePortRuleWithEmptyName() throws Exception {
+    public void deletePortRuleWithEmptyName(){
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
         PortRule portRule = new PortRule.Builder("",22,1540).build();
-        
+    
+        exception.expect(IllegalArgumentException.class);
         sut.deletePortRule(vm, portRule);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a port rule with an empty name", errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::deletePortRule() has never been called as expected
         verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule() is
-     * called with a virtual machine which has not set up a required network
-     * attachment type (NAT network attachment type) then the port rule deletion
-     * operation is ended and on a standard error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when there
+     * is made an attempt to delete a port rule from a virtual machine which is
+     * not using NAT network adapter.
      */
     @Test
-    public void deletePortRuleWithInvalidAttachmentType() throws Exception {
+    public void deletePortRuleWithInvalidAttachmentType(){
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
@@ -1301,26 +1058,18 @@ public class VirtualMachineManagerImplTest {
         //NativeVBoxAPIMachine::deletePortRule() is called with a required virtual machine
         //which has not set up a valid network attachment type
         doThrow(unexVMStateExMock).when(natAPIMachMock).deletePortRule(vm, portRule.getName());
-        //there should be returned a non-empty string value
-        when(unexVMStateExMock.getMessage()).thenReturn("Any error message");
         
+        exception.expect(UnexpectedVMStateException.class);
         sut.deletePortRule(vm, portRule);
-                
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a port rule from a virtual machine with an invalid network attachment type",
-                    errContent.toString().isEmpty());
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a port rule which does not exist on a given virtual machine
-     * then the port rule deletion operation is stopped and on the error output
-     * stream is written an error message.
-     * 
-     * @throws Exception 
+     * This test tests that there is invoked UnknownPortRuleException when there
+     * is made an attempt to delete a port rule which is not registered on a
+     * specified virtual machine.
      */
     @Test
-    public void deleteUnknownPortRule() throws Exception {
+    public void deleteUnknownPortRule(){
         //represents a virtual machine from which a port rule should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents a new port rule which should be deleted from the virtual machine vm
@@ -1335,26 +1084,18 @@ public class VirtualMachineManagerImplTest {
         //NativeVBoxAPIMachine::deletePortRule() is called with a required virtual machine
         //and port rule which does not exist
         doThrow(unPortRuleExMock).when(natAPIMachMock).deletePortRule(vm, portRule.getName());
-        //there should be returned a non-empty string value
-        when(unPortRuleExMock.getMessage()).thenReturn("Any error message");
         
+        exception.expect(UnknownPortRuleException.class);
         sut.deletePortRule(vm, portRule);
-                
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a nonexistent port rule", errContent.toString().isEmpty());
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a virtual machine from which should be a port rule deleted
-     * and which is located on a physical machine which is not connected then the
-     * port rule deletion operation itself is not even started and on a standard
-     * error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to delete a port rule from a virtual machine whose
+     * host machine is not connected.
      */
     @Test
-    public void deletePortRuleFromDisconnectedPhysicalMachine() throws Exception {
+    public void deletePortRuleFromDisconnectedPhysicalMachine(){
         //represents a virtual machine from which should be deleted a port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a port rule which should be deleted from the virtual machine vm
@@ -1364,28 +1105,21 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
+        exception.expect(ConnectionFailureException.class);
         sut.deletePortRule(vm, portRule);
-                
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete a port rule from a virtual machine on a physical machine which is not connected",
-                errContent.toString().isEmpty());
+        
         //checks the method NativeVBoxAPIMachine::deletePortRule() has never been called as expected
         verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deletePortRule()
-     * is called with a virtual machine from which should be deleted a port rule
-     * and which is located on a physical machine which should be connected, but
-     * there occured any connection problem at the deletion operation itself
-     * beginning (when the VirtualBoxManager instance is connecting to VirtualBox)
-     * then the port rule deletion operation is ended and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to delete a port rule from a virtual machine
+     * with whose host machine is lost connection while there is being processed
+     * port-forwarding rule deletion operation itself.
      */
     @Test
-    public void deletePortRuleWithSuddenNetworkConnectionLoss() throws Exception {
+    public void deletePortRuleWithSuddenNetworkConnectionLoss(){
         //represents a virtual machine from which should be deleted a port rule
         VirtualMachine vm = new VMBuilder().build();
         //represents a port rule which should be deleted from the virtual machine vm
@@ -1401,13 +1135,10 @@ public class VirtualMachineManagerImplTest {
         //and means that there occured any connection problem and a port rule cannot be deleted
         //from the virtual machine
         doThrow(conFailExMock).when(natAPIMachMock).deletePortRule(vm, portRule.getName());
-        //there should be returned a non-empty string value
-        when(conFailExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(ConnectionFailureException.class);
         sut.deletePortRule(vm, portRule);
         
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
         verify(conManMock).disconnectFrom(vm.getHostMachine());
     }
@@ -1417,11 +1148,9 @@ public class VirtualMachineManagerImplTest {
      * rules deletion met and some port rules exist on a particular virtual machine
      * then all these port rules are successfully deleted and on a standard output
      * appears an informing message about that.
-     * 
-     * @throws java.lang.Exception
      */
     @Test
-    public void deleteAllPortRulesWithSomeRules() throws Exception {
+    public void deleteAllPortRulesWithSomeRules(){
         //represents a virtual machine from which all port rules should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents the first of two port rules which exist on the virtual machine vm
@@ -1451,11 +1180,9 @@ public class VirtualMachineManagerImplTest {
      * rules deletion met and no port rule exists on a particular virtual machine
      * then the port rule deletion operation is not needed to be performed and
      * on a standard output appears an informing message about that.
-     * 
-     * @throws java.lang.Exception
      */
     @Test
-    public void deleteAllPortRulesWithNoRules() throws Exception {
+    public void deleteAllPortRulesWithNoRules(){
         //represents a virtual machine from which all port rules should be deleted
         VirtualMachine vm = new VMBuilder().build();
         
@@ -1477,21 +1204,15 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deleteAllPortRules()
-     * is called with a null virtual machine then the port rules getting operation
-     * nor the port rule deletion operation are not even performed and on a standard
-     * error output appears an informing error message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to delete all port-forwarding rules from a null virtual
+     * machine.
      */
     @Test
-    public void deleteAllPortRulesWithNullVirtualMachine() throws Exception {
-        
+    public void deleteAllPortRulesWithNullVirtualMachine(){
+        exception.expect(IllegalArgumentException.class);
         sut.deleteAllPortRules(null);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete all port rules from a null virtual machine", errContent.toString().isEmpty());
         //checks that the method NativeVBoxAPIMachine::getPortRules() has never been called as expected
         verify(natAPIMachMock, never()).getPortRules(any(VirtualMachine.class));
         //checks that the method NativeVBoxAPIMachine::deletePortRule() has never been called as expeted
@@ -1499,16 +1220,13 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deleteAllPortRules()
-     * is called with a virtual machine which does not exist then the attempt to
-     * delete all port rules is ended after the NativeVBoxAPIMachine::getPortRules()
-     * method is called (there is founded out the virtual machine does not exist)
-     * and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnknownVirtualMachineException when
+     * there is made an attempt to delete all port rules from a virtual machine
+     * which does not exist and this state is found during retrieving all port
+     * rules which should be deleted.
      */
     @Test
-    public void deleteAllPortRulesWithNonexistentVMGetter() throws Exception {
+    public void deleteAllPortRulesWithNonexistentVMGetter(){
         //represents a virtual machine from which all port rules should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnknownVirtualMachineException for better test control
@@ -1521,27 +1239,22 @@ public class VirtualMachineManagerImplTest {
         //NativeVBoxAPIMachine::getPortRules() is called with a required virtual machine and means
         //that there is no virtual machine like required on a particular physical machine
         doThrow(unVirtMachExMock).when(natAPIMachMock).getPortRules(vm);
-        //there should be returned a non-empty string value containing sequence "There is no virtual machine"
-        when(unVirtMachExMock.getMessage()).thenReturn("failure: There is no virtual machine ...");
-                
+        
+        exception.expect(UnknownVirtualMachineException.class);
         sut.deleteAllPortRules(vm);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete all port rules from a virtual machine which does not exist", errContent.toString().isEmpty());
         //checks that the method NativeVBoxAPIMachine::deletePortRule() has never been called as expeted
         verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deleteAllPortRules()
-     * is called with a virtual machine which exists, but after the port rules getting
-     * operation is finished the virtual machine is suddenly lost, then the attempt to
-     * delete all port rules is ended and on a standard error output appears an error
-     * informing message.
+     * This test tests that there is invoked UnknownVirtualMachineException when
+     * there is made an attempt to delete all port rules from a virtual machine
+     * which does not exist and this state is found while port-forwarding rule
+     * deletion operation is being processed for the first port rule.
      */
     @Test
-    public void deleteAllPortRulesWithNonexistentVMDeletion() throws Exception {
+    public void deleteAllPortRulesWithNonexistentVMDeletion(){
         //represents a virtual machine from which all port rules should be deleted
         VirtualMachine vm = new VMBuilder().build();
         //represents the first of two port rules which exist on the virtual machine vm
@@ -1564,26 +1277,18 @@ public class VirtualMachineManagerImplTest {
         //of the rules and simulates a case when a virtual machine from which should be
         //deleted all port rules is suddenly lost (removed from a list of registered virtual machines)
         doThrow(unVirtMachExMock).when(natAPIMachMock).deletePortRule(vm, "PortRule_01");
-        //there should be returned a non-empty string value
-        when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
         
+        exception.expect(UnknownVirtualMachineException.class);
         sut.deleteAllPortRules(vm);
-                
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete all port rules from a virtual machine which does not exist", errContent.toString().isEmpty());        
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deleteAllPortRules()
-     * is called with a virtual machine from which should be deleted all port rules
-     * and which is located on a physical machine which is not connected then the
-     * port rule deletion operation itself is not even started and on a standard
-     * error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to delete all port rules from a virtual machine
+     * whose host machine is not connected.
      */
     @Test
-    public void deleteAllPortRulesFromDisconnectedPhysicalMachine() throws Exception {
+    public void deleteAllPortRulesFromDisconnectedPhysicalMachine(){
         //represents a virtual machine from which should be all port rules deleted        
         VirtualMachine vm = new VMBuilder().build();
 
@@ -1591,12 +1296,9 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
+        exception.expect(ConnectionFailureException.class);
         sut.deleteAllPortRules(vm);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to delete all port rules from a virtual machine which is on a physical machine which is not connected",
-                errContent.toString().isEmpty());
         //checks that the method NativeVBoxAPIMachine::getPortRules() has never been called as expected
         verify(natAPIMachMock, never()).getPortRules(any(VirtualMachine.class));
         //checks that the method NativeVBoxAPIMachine::deletePortRule() has never been called as expeted
@@ -1604,18 +1306,13 @@ public class VirtualMachineManagerImplTest {
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deleteAllPortRules()
-     * is called with a virtual machine from which should be deleted all port rules
-     * and which is located on a physical machine which should be connected, but
-     * there occured any connection problem while there are being got an active
-     * existent port rules from the required virtual machine (when the VirtualBoxManager
-     * instance is connecting to VirtualBox) then the port rule deletion operation
-     * iself is not even started and on a standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when there
+     * is made an attempt to delete all port rules from a virtual machine with
+     * whose host machine is lost connection while there are being retrieved all
+     * port rules which should be deleted.
      */
     @Test
-    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckGetter() throws Exception {
+    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckGetter(){
         //represents a virtual machine from which should be all port rules deleted
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type ConnectionFailureException for better test control
@@ -1628,14 +1325,10 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::getPortRules() is called with a required virtual machine
         //and means that there occured any connection problem and port rules cannot be retrieved
         doThrow(conFailExMock).when(natAPIMachMock).getPortRules(vm);
-        //there should be returned a non-empty string value containing sequence "Connection operation failure"
-        when(conFailExMock.getMessage()).thenReturn("Connection operation failure ...");
 
+        exception.expect(ConnectionFailureException.class);
         sut.deleteAllPortRules(vm);
-
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
+        
         //checks the method NativeVBoxAPIMachine::deletePortRule() has never been called as expected
         verify(natAPIMachMock, never()).deletePortRule(any(VirtualMachine.class), anyString());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
@@ -1643,16 +1336,13 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::deleteAllPortRules()
-     * is called with a virtual machine from which should be deleted all port rules
-     * and which is located on a physical machine which should be connected, but
-     * there occured any connection problem at the deletion operation itself
-     * beginning (when the VirtualBoxManager instance is connecting to VirtualBox)
-     * then the port rule deletion operation is ended and on a standard error
-     * output appears an error informing message.
+     * This test tests that there is invoked ConnectionFailureException when there
+     * is made an attempt to delete all port rules from a virtual machine with
+     * whose host machine is lost connection while there is being processed
+     * port-forwarding deletion operation itself.
      */
     @Test
-    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckDeletion() throws Exception {
+    public void deleteAllPortRulesWithSuddenNetworkConnectionLossInnerCheckDeletion(){
         //represents a virtual machine from which should be all port rules deleted
         VirtualMachine vm = new VMBuilder().build();        
         //represents the first of two port rules which exist on the virtual machine vm
@@ -1675,13 +1365,10 @@ public class VirtualMachineManagerImplTest {
         //and first of port rules and means that there occured any connection problem and a port rule
         //cannot be deleted from the virtual machine 
         doThrow(conFailExMock).when(natAPIMachMock).deletePortRule(vm, "PortRule_01");
-        //there should be returned a non-empty string value
-        when(conFailExMock.getMessage()).thenReturn("Any error message");
         
+        exception.expect(ConnectionFailureException.class);
         sut.deleteAllPortRules(vm);
         
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
         verify(conManMock).disconnectFrom(vm.getHostMachine());
     }
@@ -1692,11 +1379,9 @@ public class VirtualMachineManagerImplTest {
      * any port rules then these port rules are returned as a result of
      * VirtualMachineManagerImpl::getPortRules() method call and no exception nor
      * error should appear.
-     * 
-     * @throws java.lang.Exception
      */
     @Test
-    public void getPortRulesWithReturnedNonemptyList() throws Exception {
+    public void getPortRulesWithReturnedNonemptyList(){
         //represents a virtual machine from which should be all port rules retrieved
         VirtualMachine vm = new VMBuilder().build();        
         //represents the first of two port rules which exist on the virtual machine vm in a string form
@@ -1734,11 +1419,9 @@ public class VirtualMachineManagerImplTest {
      * any port rule then there is returned an empty list of port rules as a result of
      * VirtualMachineManagerImpl::getPortRules() method call and no exception nor
      * error should appear.
-     * 
-     * @throws java.lang.Exception
      */
     @Test
-    public void getPortRulesWithReturnedEmptyList() throws Exception {
+    public void getPortRulesWithReturnedEmptyList(){
         //represents a virtual machine from which should be all port rules retrieved
         VirtualMachine vm = new VMBuilder().build();
         
@@ -1757,32 +1440,22 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getPortRules()
-     * is called with a null virtual machine then the port rule retrieve operation
-     * itself is not even started, also there is returned an empty list of port rules
-     * as a result and on a standard error output appears an error informing message.
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to retrieve all port rules from a null virtual machine.
      */
     @Test
     public void getPortRulesWithNullVirtualMachine() {
-        
-        List<PortRule> actPortRules = sut.getPortRules(null);
-        
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to retrieve all port rules from a null virtual machine", errContent.toString().isEmpty());
-        assertTrue("The list of port rules should be empty", actPortRules.isEmpty());
+        exception.expect(IllegalArgumentException.class);
+        sut.getPortRules(null);
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getPortRules()
-     * is called with a virtual machine which does not exist then the port rules
-     * retrieve operation is ended and on a standard error output appears an error
-     * informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnkownVirtualMachineException when
+     * there is made an attempt to retrieve all port rules from a virtual machine
+     * which does not exist.
      */
     @Test
-    public void getPortRulesWithNonexistentVM() throws Exception {
+    public void getPortRulesWithNonexistentVM(){
         //represents a virtual machine from which should be all port rules retrieved
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnknownVirtualMachineException for better test control
@@ -1795,27 +1468,18 @@ public class VirtualMachineManagerImplTest {
         //NativeVBoxAPIMachine::getPortRules() is called with a required virtual machine and
         //means that the virtual machine does not exist and therefore port rules cannot be retrieved
         doThrow(unVirtMachExMock).when(natAPIMachMock).getPortRules(vm);
-        //there should be returned a non-empty string value when the UnknownVirtualMachineException::getMessage() is called
-        when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
         
-        List<PortRule> actPortRules = sut.getPortRules(vm);
-        
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should not be written a message on a standard error output", errContent.toString().isEmpty());
-        assertTrue("The list of port rules should be empty", actPortRules.isEmpty());
+        exception.expect(UnknownVirtualMachineException.class);
+        sut.getPortRules(vm);
     }
     
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getPortRules()
-     * is called with a virtual machine from which should be all port rules retrieved
-     * and which is located on a physical machine which is not connected then the
-     * port rules retrieve operation itself is not even started and on a standard
-     * error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to retrieve all port rules from a virtual machine
+     * whose host machine is not connected.
      */
     @Test
-    public void getPortRulesFromDisconnectedPhysicalMachine() throws Exception {
+    public void getPortRulesFromDisconnectedPhysicalMachine(){
         //represents a virtual machine from which should be all port rules retrieved
         VirtualMachine vm = new VMBuilder().build();        
 
@@ -1823,29 +1487,21 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
+        exception.expect(ConnectionFailureException.class);
         sut.getPortRules(vm);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to retrieve port rules from a virtual machine which is on a physical machine which is not connected",
-                errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::getPortRules() has never been called as expected
         verify(natAPIMachMock, never()).getPortRules(any(VirtualMachine.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getPortRules()
-     * is called with a virtual machine from which should be all port rules retrieved
-     * and which is located on a physical machine which should be connected, but
-     * there occured any connection problem at the retrieve operation itself
-     * beginning (when the VirtualBoxManager instance is connecting to VirtualBox)
-     * then the port rule retrieve operation is ended and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to retrieve all port rules from a virtual machine
+     * with whose host machine is lost connection while there is being processed
+     * all port-forwarding rules retrieve operation itself.
      */
     @Test
-    public void getPortRulesWithSuddenNetworkConnectionLoss() throws Exception {
+    public void getPortRulesWithSuddenNetworkConnectionLoss(){
         //represents a virtual machine from which should be deleted a port rule
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnknownVirtualMachineException for better test control
@@ -1859,14 +1515,10 @@ public class VirtualMachineManagerImplTest {
         //and means that there occured any connection problem and port rules cannot be retrieved
         //from the virtual machine
         doThrow(conFailExMock).when(natAPIMachMock).getPortRules(vm);
-        //there should be returned a non-empty string value when the ConnectionFailureException::getMessage() is called
-        when(conFailExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(ConnectionFailureException.class);
         sut.getPortRules(vm);
-
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
+        
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
         verify(conManMock).disconnectFrom(vm.getHostMachine());
     }
@@ -1893,35 +1545,25 @@ public class VirtualMachineManagerImplTest {
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getVMState()
-     * is called with a null virtual machine argument then the virtual machine
-     * state finding out operation itself is not even started and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked IllegalArgumentException when there
+     * is made an attempt to query the state of a null virtual machine.
      */
     @Test
-    public void getNullVMState() throws Exception {
-
+    public void getNullVMState(){
+        exception.expect(IllegalArgumentException.class);
         sut.getVMState(null);
-
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to find out the state of a null virtual machine", errContent.toString().isEmpty());
+        
         //checks the method NativeVBoxAPIMachine::getVMState() has never been called as expected
         verify(natAPIMachMock, never()).getVMState(any(VirtualMachine.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getVMState()
-     * is called with a virtual machine which does not exist then the virtual
-     * machine state finding out operation is stopped and on a standard error
-     * output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnknownVirtualMachineException when
+     * there is made an attempt to query the state of a virtual machine which
+     * does not exist.
      */
     @Test
-    public void getNonexistentVMState() throws Exception {
+    public void getNonexistentVMState(){
         //represents a virtual machine whose state should be found out
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnknownVirtualMachineException for better test control
@@ -1934,26 +1576,18 @@ public class VirtualMachineManagerImplTest {
         //the method NativeVBoxAPIMachine::getVMState() is called with a required virtual machine
         //and means that the virtual machine does not exist and cannot be started
         doThrow(unVirtMachExMock).when(natAPIMachMock).getVMState(vm);
-        //there should be returned a non-empty string value when the method UnknownVirtualMachineException::getMessage() is called
-        when(unVirtMachExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(UnknownVirtualMachineException.class);
         sut.getVMState(vm);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine which does not exist", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getVMState()
-     * is called with a virtual machine which is not accessible (probably its
-     * source files are missing or corrupted) then the virtual machine state
-     * finding out operation is stopped and on a standard error output appears
-     * an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked UnexpectedVMStateException when
+     * there is made an attempt to query the state of an inaccessible virtual
+     * machine.
      */
     @Test
-    public void getInaccessibleVMState() throws Exception {
+    public void getInaccessibleVMState(){
         //represents a virtual machine whose state should be found out
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type UnexpectedVMStateException for better test control
@@ -1967,26 +1601,18 @@ public class VirtualMachineManagerImplTest {
         //and means that the virtual machine's source files are missing or corrupted
         //and cannot be started
         doThrow(unexVMStateMock).when(natAPIMachMock).getVMState(vm);
-        //there should be returned a non-empty string value when the method UnexpectedVMStateException::getMessage() is called
-        when(unexVMStateMock.getMessage()).thenReturn("Any error message");
         
+        exception.expect(UnexpectedVMStateException.class);
         sut.getVMState(vm);
-        
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine which is not accessible", errContent.toString().isEmpty());
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getVMState()
-     * is called with a virtual machine whose state should be found out and which
-     * is located on a physical machine which is not connected then the virtual 
-     * machine state finding out operation itself is not even started and on a 
-     * standard error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when
+     * there is made an attempt to query the state of a virtual machine whose
+     * host machine is not connected.
      */
     @Test
-    public void getVMStateOnDisconnectedPhysicalMachine() throws Exception {
+    public void getVMStateOnDisconnectedPhysicalMachine(){
         //represents a virtual machine whose state should be found out
         VirtualMachine vm = new VMBuilder().build();
 
@@ -1994,29 +1620,21 @@ public class VirtualMachineManagerImplTest {
         //is not connected and therefore there is not possible to work with virtual machines
         when(conManMock.isConnected(vm.getHostMachine())).thenReturn(false);
         
+        exception.expect(ConnectionFailureException.class);
         sut.getVMState(vm);
         
-        assertTrue("There should not be written a message on a standard output", outContent.toString().isEmpty());
-        assertFalse("There should be written a message on a standard error output that there was made an attempt "
-                + "to start a virtual machine on a physical machine which is not connected",
-                errContent.toString().isEmpty());
         //checks the method NativeVBoxAPIMachine::getVMState() has never been called as expected
         verify(natAPIMachMock, never()).getVMState(any(VirtualMachine.class));
     }
 
     /**
-     * This test tests that if the method VirtualMachineManagerImpl::getVMState()
-     * is called with a virtual machine whose state should be found out and which
-     * is located on a physical machine which should be connected, but there 
-     * occured any connection problem at the start-up operation beginning (when
-     * the VirtualBoxManager instance is connecting to VirtualBox) then the
-     * virtual machine state finding out operation is stopped and on a standard
-     * error output appears an error informing message.
-     * 
-     * @throws java.lang.Exception
+     * This test tests that there is invoked ConnectionFailureException when there
+     * is made an attempt to query the state of a virtual machine with whose host
+     * machine is lost connection while there is being processed VM state query
+     * operation itself.
      */
     @Test
-    public void getVMStateWithSuddenNetworkConnectionLoss() throws Exception {
+    public void getVMStateWithSuddenNetworkConnectionLoss(){
         //represents a virtual machine whose state should be found out
         VirtualMachine vm = new VMBuilder().build();
         //mock object of type ConnectionfailureException for better test control
@@ -2030,13 +1648,10 @@ public class VirtualMachineManagerImplTest {
         //and means that there occured any connection problem at the beginning
         //of the start-up operation
         doThrow(conFailExMock).when(natAPIMachMock).getVMState(vm);
-        //there should be returned a non-empty string value when the method ConnectionFailureException::getMessage() is called
-        when(conFailExMock.getMessage()).thenReturn("Any error message");
 
+        exception.expect(ConnectionFailureException.class);
         sut.getVMState(vm);
         
-        assertFalse("There should be written a message on a standard error output that there occured "
-                + "any connection problem", errContent.toString().isEmpty());
         //checks the method ConnectionManager::disconnectFrom() has been called as expected
         verify(conManMock).disconnectFrom(vm.getHostMachine());
     }

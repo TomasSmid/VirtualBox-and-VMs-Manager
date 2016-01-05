@@ -15,52 +15,86 @@
  */
 package cz.muni.fi.virtualtoolmanager.logicimpl;
 
-import cz.muni.fi.virtualtoolmanager.io.OutputHandler;
+import cz.muni.fi.virtualtoolmanager.pubapi.io.OutputHandler;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PortRule;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException;
-import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownPortRuleException;
 import cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.FrontEndType;
 import cz.muni.fi.virtualtoolmanager.pubapi.types.ProtocolType;
-import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
+ * Class that provide the implementation of methods declared in
+ * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager
+ * VirtualMachineManager}.
+ * 
  * @author Tomáš Šmíd
  */
 public class VirtualMachineManagerImpl implements VirtualMachineManager{
     
+    /**
+     * <div>
+     * Method that implements the method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager#startVM(VirtualMachine, FrontEndType)
+     * VirtualMachineManager::startVM(VirtualMachine, FrontEndType}.
+     * </div>
+     * <div>
+     * This method is implemented to start the required virtual machine with the
+     * specified front-end type {@link cz.muni.fi.virtualtoolmanager.pubapi.types.FrontEndType
+     * FrontEndType}.
+     * If any error occurs, then there can be thrown the following exceptions:
+     * <ul>
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * ConnectionFailureException} - </strong>thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved or when the physical machine is not
+     * connected
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException
+     * UnknownVirtualMachineException} - </strong>thrown when the given virtual machine
+     * is being retrieved from remote physical machine, but that virtual machine
+     * does not exist (is not registered at the VirtualBox hypervisor) on the 
+     * remote physical machine
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException
+     * UnexpectedVMStateException} - </strong>thrown when the virtual machine cannot be
+     * accessed (e.g. corrupted configuration files) or when the virtual machine
+     * is in a not required state ("running","paused") for starting operation or
+     * the starting operation is aborted because of the another process which
+     * is using the virtual machine at the same moment.
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * virtual machine is <code>null</code> or the given front-end type is
+     * <code>null</code>
+     * </ul>
+     * </div>
+     * @param virtualMachine virtual machine which should be started
+     * @param frontEndType type of front-end used for virtual machine
+     */
     @Override
     public void startVM(VirtualMachine virtualMachine, FrontEndType frontEndType) {
         OutputHandler outputHandler = new OutputHandler();
         
         if(virtualMachine == null){
-            outputHandler.printErrorMessage("Virtual machine starting operation "
-                    + "failure: There was made an attempt to start a null virtual "
-                    + "machine.");
-            return;
+            throw new IllegalArgumentException("A null virtual machine used for "
+                    + "virtual machine starting operation.");
         }
         
         if(frontEndType == null){
-            outputHandler.printErrorMessage("Virtual machine starting operation "
-                    + "failure: There was specified a null guest front-end type.");
-            return;
+            throw new IllegalArgumentException("A null front-end type used for "
+                    + "virtual machine starting operation.");
         }
         
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         if(!connectionManager.isConnected(virtualMachine.getHostMachine())){
-            outputHandler.printErrorMessage("Virtual machine starting operation "
-                    + "failure: Virtual machine " + virtualMachine + " cannot be "
-                    + "started, because its host machine " + virtualMachine.getHostMachine()
-                    + " is not connected.");
-            return;
+            throw new ConnectionFailureException("Virtual machine starting "
+                    + "operation failure: Virtual machine " + virtualMachine
+                    + " cannot be started, because its host machine "
+                    + virtualMachine.getHostMachine() + " is not connected.");
         }
         
         outputHandler.printMessage("Starting virtual machine " + virtualMachine);
@@ -68,40 +102,63 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
         NativeVBoxAPIMachine nativeVBoxAPIMachine = new NativeVBoxAPIMachine();
         try{
             nativeVBoxAPIMachine.startVM(virtualMachine, frontEndType);
-        } catch (UnknownVirtualMachineException | UnexpectedVMStateException ex) {
-            outputHandler.printErrorMessage(ex.getMessage());
-            return;
         }catch(ConnectionFailureException ex){
-            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
-                    + "the work with physical machine " + virtualMachine.getHostMachine()
-                    + " and its virtual machines and physical machine will be disconnected -> "
-                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            
-            return;
+            throw ex;
         }
         
         outputHandler.printMessage("Virtual machine " + virtualMachine + " is running");
     }
 
+    /**
+     * <div>
+     * Method that implements the method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager#shutDownVM(VirtualMachine) 
+     * VirtualMachineManager::shutDownVM(VirtualMachine}.
+     * </div>
+     * <div>
+     * This method is implemented to shut down the required virtual machine like
+     * the machine was unplugged. So it is fast, but no state are saved and any
+     * data can be lost.
+     * If any error occurs, then there can be thrown the following exceptions:
+     * <ul>
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * ConnectionFailureException} - </strong>thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved or when the physical machine is not
+     * connected
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException
+     * UnknownVirtualMachineException} - </strong>thrown when the given virtual machine
+     * is being retrieved from remote physical machine, but that virtual machine
+     * does not exist (is not registered at the VirtualBox hypervisor) on the 
+     * remote physical machine
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException
+     * UnexpectedVMStateException} - </strong>thrown when the virtual machine cannot be
+     * accessed (e.g. corrupted configuration files) or when the virtual machine
+     * is not in a required state ("running", "paused", "stuck") for shut down 
+     * operation
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * virtual machine is <code>null</code>
+     * </ul>
+     * </div>
+     * @param virtualMachine virtual machine which should be shut down     
+     */
     @Override
     public void shutDownVM(VirtualMachine virtualMachine) {
         OutputHandler outputHandler = new OutputHandler();
         
         if(virtualMachine == null){
-            outputHandler.printErrorMessage("Virtual machine shutdown operation "
-                    + "failure: There was made an attempt to shut down a null virtual "
-                    + "machine.");
-            return;
+            throw new IllegalArgumentException("A null virtual machine used for "
+                    + "virtual machine shutdown operation.");
         }
         
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         if(!connectionManager.isConnected(virtualMachine.getHostMachine())){
-            outputHandler.printErrorMessage("Virtual machine shutdown operation "
-                    + "failure: Virtual machine " + virtualMachine + " cannot be "
-                    + "shut down, because its host machine " + virtualMachine.getHostMachine()
-                    + " is not connected.");
-            return;
+            throw new ConnectionFailureException("Virtual machine shutdown "
+                    + "operation failure: Virtual machine " + virtualMachine
+                    + " cannot be shut down, because its host machine "
+                    + virtualMachine.getHostMachine() + " is not connected.");
         }
         
         outputHandler.printMessage("Shutting down virtual machine " + virtualMachine);
@@ -109,212 +166,298 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
         NativeVBoxAPIMachine nativeVBoxAPIMachine = new NativeVBoxAPIMachine();
         try{
             nativeVBoxAPIMachine.shutDownVM(virtualMachine);
-        } catch (UnknownVirtualMachineException | UnexpectedVMStateException ex) {
-            outputHandler.printErrorMessage(ex.getMessage());
-            return;
-        }catch(ConnectionFailureException ex){
-            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
-                    + "the work with physical machine " + virtualMachine.getHostMachine()
-                    + " and its virtual machines and physical machine will be disconnected -> "
-                    + ex.getMessage());
+        }catch(ConnectionFailureException ex){            
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            return;
+            throw ex;
         }
         
         outputHandler.printMessage("Virtual machine " + virtualMachine + " is powered off");
     }
 
+    /**
+     * <div>
+     * Method that imlements method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager#addPortRule(VirtualMachine, PortRule) 
+     * VirtualMachineManager::addPortRule(VirtualMachine, PortRule)}.
+     * </div>
+     * <div>
+     * If there occurs any error, then the following exceptions can be thrown:
+     * <ul>
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * ConnectionFailureException} - </strong>thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved or when the physical machine is not
+     * connected
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException
+     * UnknownVirtualMachineException} - </strong>thrown when the given virtual machine
+     * is being retrieved from remote physical machine, but that virtual machine
+     * does not exist (is not registered at the VirtualBox hypervisor) on the 
+     * remote physical machine
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException
+     * UnexpectedVMStateException} - </strong>thrown when the virtual machine is not
+     * attached to the NAT network adapter -&gt; no port-forwarding can be done
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * virtual machine is <code>null</code> or the given port rule is not valid
+     * </ul>
+     * </div>
+     * @param virtualMachine virtual machine to which a new port-forwarding rule
+     * should be added
+     * @param portRule a new port-forwarding rule 
+     */
     @Override
     public void addPortRule(VirtualMachine virtualMachine, PortRule portRule) {
         OutputHandler outputHandler = new OutputHandler();
-        ConnectionManager connectionManager = new ConnectionManagerImpl();
+        String operation = "new port-forwarding rule addition operation.";
         
         if(virtualMachine == null){
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a new port-forwarding "
-                    + "rule to a null virtual machine.");
-            return;
+            throw new IllegalArgumentException("A null virtual machine used for "
+                    + "new port-forwarding rule addition operation.");
         }
         
-        if(!isPortRuleValid(portRule, virtualMachine)){
-            //an error message was already printed, so just exit
-            return;
-        }        
+        validatePortRule(portRule,operation,virtualMachine);
         
+        ConnectionManager connectionManager = new ConnectionManagerImpl();
         if(!connectionManager.isConnected(virtualMachine.getHostMachine())){
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: New port rule cannot be added to the virtual machine "
-                    + virtualMachine + ", because its host machine " + virtualMachine.getHostMachine()
-                    + " is not connected.");
-            return;
+            throw new ConnectionFailureException("New port-forwarding rule addition "
+                    + "operation failure: New port rule cannot be added to the "
+                    + "virtual machine " + virtualMachine + ", because its host "
+                    + "machine is not connected.");
         }
         
-        outputHandler.printMessage("Adding new port-forwarding rule " + portRule + " to the "
-                + "virtual machine " + virtualMachine);
+        outputHandler.printMessage("Adding new port-forwarding rule " + portRule
+                + " to the virtual machine " + virtualMachine);
         
         NativeVBoxAPIMachine nativeVBoxAPIMachine = new NativeVBoxAPIMachine();
         try{
             nativeVBoxAPIMachine.addPortRule(virtualMachine, portRule);
-        } catch (UnknownVirtualMachineException | UnexpectedVMStateException ex) {
-            outputHandler.printErrorMessage(ex.getMessage());
-            return;
-        } catch (ConnectionFailureException ex){
-            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
-                    + "the work with physical machine " + virtualMachine.getHostMachine()
-                    + " and its virtual machines and physical machine will be disconnected -> "
-                    + ex.getMessage());
+        }catch (ConnectionFailureException ex){
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            return;
+            throw ex;
         }
         
-        outputHandler.printMessage("Port-forwarding rule " + portRule + " has been "
-                + "added successfully");
+        outputHandler.printMessage("Port-forwarding rule " + portRule + " has "
+                + "been added successfully");
     }
 
+    /**
+     * <div>
+     * Method that implements the method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager#deletePortRule(VirtualMachine, PortRule)
+     * VirtualMachineManager::deletePortRule(VirtualMachine,PortRule)}.
+     * </div>
+     * <div>
+     * <ul>
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * ConnectionFailureException} - </strong>thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved or when the physical machine is not
+     * connected
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException
+     * UnknownVirtualMachineException} - </strong>thrown when the given virtual machine
+     * is being retrieved from remote physical machine, but that virtual machine
+     * does not exist (is not registered at the VirtualBox hypervisor) on the 
+     * remote physical machine
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException
+     * UnexpectedVMStateException} - </strong>thrown when the virtual machine is not
+     * attached to the NAT network adapter -&gt; no port-forwarding can be done
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * virtual machine is <code>null</code> or the given port rule is not valid
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownPortRuleException
+     * UnknownPortRuleException} - </strong>thrown when there is made an attempt to
+     * delete a non-existent port-forwarding rule
+     * </ul>
+     * </div>
+     * @param virtualMachine virtual machine from which the port-forwarding rule
+     * should be deleted
+     * @param portRule a port-forwarding rule which should be deleted
+     */
     @Override
     public void deletePortRule(VirtualMachine virtualMachine, PortRule portRule) {
         OutputHandler outputHandler = new OutputHandler();
+        String operation = "port-forwarding rule deletion operation.";
         
         if(virtualMachine == null){
-            outputHandler.printErrorMessage("Port-forwarding rule deletion operation "
-                    + "failure: There was made an attempt to delete a port-forwarding "
-                    + "rule from a null virtual machine.");
-            return;
+            throw new IllegalArgumentException("A null virtual machine used for "
+                    + "port-forwarding rule deletion operation.");
         }
         
-        if(portRule == null){
-            outputHandler.printErrorMessage("Port-forwarding rule deletion operation "
-                    + "failure: There was made an attempt to delete a null port-forwarding rule.");
-            return;
-        }        
-        if(portRule.getName() == null){
-            outputHandler.printErrorMessage("Port-forwarding rule deletion operation "
-                    + "failure: There was made an attempt to delete a port-forwarding "
-                    + "rule with a null name.");
-            return;
-        }        
-        if(portRule.getName().trim().isEmpty()){
-            outputHandler.printErrorMessage("Port-forwarding rule deletion operation "
-                    + "failure: There was made an attempt to delete a port-forwarding "
-                    + "rule with an empty name.");
-            return;
-        }
+        checkPortRuleIsNull(portRule, operation);
+        checkPortRuleName(portRule.getName(), operation);
         
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         if(!connectionManager.isConnected(virtualMachine.getHostMachine())){
-            outputHandler.printErrorMessage("Port-forwarding rule deletion operation "
-                    + "failure: Port rule cannot be deleted from the virtual machine "
-                    + virtualMachine + ", because its host machine " + virtualMachine.getHostMachine()
-                    + " is not connected.");
-            return;
+            throw new ConnectionFailureException("Port-forwarding rule deletion "
+                    + "operation failure: Port rule cannot be deleted from the "
+                    + "virtual machine " + virtualMachine + ", because its host "
+                    + "machine is not connected.");
         }
         
-        outputHandler.printMessage("Deleting port-forwarding rule \"" + portRule.getName() + "\" "
-                + "from virtual machine " + virtualMachine);
+        outputHandler.printMessage("Deleting port-forwarding rule \"" 
+                + portRule.getName() + "\" from virtual machine " + virtualMachine);
         
         NativeVBoxAPIMachine nativeVBoxAPIMachine = new NativeVBoxAPIMachine();
         try{
             nativeVBoxAPIMachine.deletePortRule(virtualMachine, portRule.getName());
-        }catch(UnknownVirtualMachineException | UnexpectedVMStateException | UnknownPortRuleException ex){
-            outputHandler.printErrorMessage(ex.getMessage());
-            return;
-        }catch(ConnectionFailureException ex){
-            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
-                    + "the work with physical machine " + virtualMachine.getHostMachine()
-                    + " and its virtual machines and physical machine will be disconnected -> "
-                    + ex.getMessage());
+        }catch(ConnectionFailureException ex){            
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            return;
+            throw ex;
         }
         
-        outputHandler.printMessage("Port-forwarding rule \"" + portRule.getName() + "\" "
-                + "deleted successfully");
+        outputHandler.printMessage("Port-forwarding rule \"" + portRule.getName()
+                + "\" deleted successfully");
     }
 
+    /**
+     * <div>
+     * Method that implements the method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager#deleteAllPortRules(VirtualMachine)
+     * VirtualMachineManager::deleteAllPortRules(VirtualMachine)}.
+     * </div>
+     * <div>
+     * The implementation of this method uses the implementation of method
+     * {@link #deletePortRule(VirtualMachine, PortRule)}.
+     * If there occurs any error, then the following exceptions can be thrown:
+     * <ul>
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * ConnectionFailureException} - </strong>thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved or when the physical machine is not
+     * connected
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException
+     * UnknownVirtualMachineException} - </strong>thrown when the given virtual machine
+     * is being retrieved from remote physical machine, but that virtual machine
+     * does not exist (is not registered at the VirtualBox hypervisor) on the 
+     * remote physical machine
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException
+     * UnexpectedVMStateException} - </strong>thrown when the virtual machine is not
+     * attached to the NAT network adapter -&gt; no port-forwarding can be done
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * virtual machine is <code>null</code>
+     * </ul>
+     * </div>
+     * @param virtualMachine virtual machine from which all its port-forwarding
+     * rules will be removed
+     */
     @Override
     public void deleteAllPortRules(VirtualMachine virtualMachine) {
         OutputHandler outputHandler = new OutputHandler();
         
         if(virtualMachine == null){
-            outputHandler.printErrorMessage("All port-forwarding rules deletion operation "
-                    + "failure: There was made an attempt to delete all port rules from "
-                    + "a null virtual machine.");
-            return;
+            throw new IllegalArgumentException("A null virtual machine used for "
+                    + "all port-forwarding rules deletion operation.");
         }
         
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         if(!connectionManager.isConnected(virtualMachine.getHostMachine())){
-            outputHandler.printErrorMessage("All port-forwarding rules deletion operation "
-                    + "failure: Port rules cannot be deleted from the virtual machine "
-                    + virtualMachine + ", because its host machine " + virtualMachine.getHostMachine()
-                    + " is not connected.");
-            return;
+            throw new ConnectionFailureException("All port-forwarding rules "
+                    + "deletion operation failure: Port rules cannot be deleted "
+                    + "from the virtual machine " + virtualMachine + ", because "
+                    + "its host machine is not connected.");
         }
         
         PrintStream origOutStream = OutputHandler.getOutputStream();
         PrintStream origErrStream = OutputHandler.getErrorOutputStream();
-        final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        setOutputStreams(null, new PrintStream(errContent));
+        List<PortRule> registeredPortRules = null;
         
-        List<PortRule> portRules = getPortRules(virtualMachine);
+        setOutputStreams(null);
+        try{
+            registeredPortRules = getPortRules(virtualMachine);
+        }catch(UnknownVirtualMachineException ex){
+            throw new UnknownVirtualMachineException("All port-forwarding rules "
+                    + "deletion operation failure: There is no virtual machine "
+                    + virtualMachine + " known to VirtualBox.");
+        }catch(UnexpectedVMStateException ex){
+            throw new UnexpectedVMStateException("All port-forwarding rules deletion "
+                    + "operation failure: There cannot be deleted port-forwarding "
+                    + "rules from virtual machine " + virtualMachine + ", because "
+                    + "its network adapter is not attached to the required network "
+                    + "adapter of type NAT.");
+        }catch(ConnectionFailureException ex){
+            throw new ConnectionFailureException("All port-forwarding rules deletion "
+                    + "operation failure: Unable to connect to the physical machine "
+                    + virtualMachine.getHostMachine() + ". Most probably there "
+                    + "occured one of these problems: 1. Network connection is "
+                    + "not working properly or at all / 2. The VirtualBox web "
+                    + "server is not running / 3. One of the key value (IP address, "
+                    + "number of web server port, username or user password) of "
+                    + "the physical machine has been changed and it is incorrect "
+                    + "now (used value is not the actual correct one).");
+        }
         
         setOutputStreams(origOutStream, origErrStream);        
-        if(!portRules.isEmpty()){
-            outputHandler.printMessage("Deleting all port-forwarding rules from virtual "
-                    + "machine " + virtualMachine);
-            for(PortRule portRule : portRules){
+        if(!registeredPortRules.isEmpty()){
+            outputHandler.printMessage("Deleting all port-forwarding rules from "
+                    + "virtual machine " + virtualMachine);
+            for(PortRule portRule : registeredPortRules){
                 deletePortRule(virtualMachine, portRule);
             }
         }else{
-            String[] messages = {"All port-forwarding rules deletion operation failure: Unable to connect to the physical machine "
-                                    + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working "
-                                    + "properly or at all / 2. The VirtualBox web server is not running / 3. One of the key value (IP address, number of web server port, "
-                                    + "username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                                 "All port-forwarding rules deletion operation failure: There is no virtual machine " + virtualMachine + " on "
-                                    + "physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. Port-forwarding rules cannot be deleted from a nonexistent virtual machine.",
-                                 "All port-forwarding rules deletion operation failure: There cannot be deleted port-forwarding rules from virtual "
-                                    + "machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT."};
-            if(isErrorOutputStreamEmpty(errContent.toString(), messages)){
-                outputHandler.printMessage("There is no port-forwarding rule to be deleted "
-                        + "from virtual machine " + virtualMachine);
-            }
+            outputHandler.printMessage("There is no port-forwarding rule to be "
+                    + "deleted from virtual machine " + virtualMachine);
         }
     }
 
+    /**
+     * <div>
+     * Method that implements the method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager#getPortRules(VirtualMachine)
+     * VirtualMachineManager::getPortRules(VirtualMachine)}.
+     * </div>
+     * <div>
+     * This method returns all existing port-forwarding rules of a particular
+     * virtual machine.
+     * If there occurs any error, then the following exceptions can be thrown:
+     * <ul>
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * ConnectionFailureException} - </strong>thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved or when the physical machine is not
+     * connected
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException
+     * UnknownVirtualMachineException} - </strong>thrown when the given virtual machine
+     * is being retrieved from remote physical machine, but that virtual machine
+     * does not exist (is not registered at the VirtualBox hypervisor) on the 
+     * remote physical machine
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException
+     * UnexpectedVMStateException} - </strong>thrown when the virtual machine is not
+     * attached to the NAT network adapter -&gt; no port-forwarding can be done
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * virtual machine is <code>null</code>
+     * </ul>
+     * </div>
+     * @param virtualMachine virtual machine from which are retrieved all its
+     * registered port-forwarding rules
+     * @return list of all registered port-forwarding rules of a particular virtual
+     * machine
+     */
     @Override
     public List<PortRule> getPortRules(VirtualMachine virtualMachine) {
         OutputHandler outputHandler = new OutputHandler();        
         
         if(virtualMachine == null){
-            outputHandler.printErrorMessage("All port-forwarding rules retrieve operation "
-                    + "failure: There was made an attempt to get all port-forwarding rules "
-                    + "from a null virtual machine.");
-            return new ArrayList<>();
+            throw new IllegalArgumentException("A null virtual machine used for "
+                    + "all port-forwarding rules retrieve operation.");
         }
         
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         if(!connectionManager.isConnected(virtualMachine.getHostMachine())){
-            outputHandler.printErrorMessage("All port-forwarding rules retrieve operation "
-                    + "failure: Port rules cannot be retrieved from the virtual machine "
-                    + virtualMachine + ", because its host machine " + virtualMachine.getHostMachine()
-                    + " is not connected.");
-            return new ArrayList<>();
+            throw new ConnectionFailureException("All port-forwarding rules retrieve "
+                    + "operation failure: Port rules cannot be retrieved from "
+                    + "the virtual machine " + virtualMachine + ", because its "
+                    + "host machine is not connected.");
         }
         
         NativeVBoxAPIMachine nativeVBoxAPIMachine = new NativeVBoxAPIMachine();
         List<String> strPortRules;
         try{
             strPortRules = nativeVBoxAPIMachine.getPortRules(virtualMachine);
-        } catch (UnknownVirtualMachineException | UnexpectedVMStateException ex) {
-            outputHandler.printErrorMessage(ex.getMessage());
-            return new ArrayList<>();
-        } catch (ConnectionFailureException ex){
-            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
-                    + "the work with physical machine " + virtualMachine.getHostMachine()
-                    + " and its virtual machines and physical machine will be disconnected -> "
-                    + ex.getMessage());
+        }catch (ConnectionFailureException ex){
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            return new ArrayList<>();
+            throw ex;
         }
         
         if(!strPortRules.isEmpty()){
@@ -324,40 +467,62 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
         return new ArrayList<>();
     }
 
+    /**
+     * <div>
+     * Method that implements the method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualMachineManager#getVMState(VirtualMachine)
+     * VirtualMachineManager#getVMState(VirtualMachine)}
+     * </div>
+     * <div>
+     * This method gets the actual state of a particular virtual machine.
+     * If there occurs any error, then the following exceptions can be thrown:
+     * <ul>
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
+     * ConnectionFailureException} - </strong>thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved or when the physical machine is not
+     * connected
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnknownVirtualMachineException
+     * UnknownVirtualMachineException} - </strong>thrown when the given virtual machine
+     * is being retrieved from remote physical machine, but that virtual machine
+     * does not exist (is not registered at the VirtualBox hypervisor) on the 
+     * remote physical machine
+     * <li><strong>{@link cz.muni.fi.virtualtoolmanager.pubapi.exceptions.UnexpectedVMStateException
+     * UnexpectedVMStateException} - </strong>thrown when the virtual machine cannot be
+     * accessed (e.g. corrupted configuration files)
+     * operation
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * virtual machine is <code>null</code>
+     * </ul>
+     * </div>
+     * @param virtualMachine represents the queried virtual machine
+     * @return the actual state of the virtual machine as string
+     */
     @Override
     public String getVMState(VirtualMachine virtualMachine) {
         OutputHandler outputHandler = new OutputHandler();
         
         if(virtualMachine == null){
-            outputHandler.printErrorMessage("Virtual machine state finding out operation "
-                    + "failures: There was made an attempt to find out the state of a null "
-                    + "virtual machine.");
-            return null;
+            throw new IllegalArgumentException("A null virtual machine used for "
+                    + "virtual machine state query operation.");
         }
         
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         if(!connectionManager.isConnected(virtualMachine.getHostMachine())){
-            outputHandler.printErrorMessage("Virtual machine state finding out operation "
-                    + "failures: There cannot be found out the state of virtual machine " 
-                    + virtualMachine + ", because its host machine " + virtualMachine.getHostMachine()
-                    + " is not connected.");
-            return null;
+            throw new ConnectionFailureException("Virtual machine state query "
+                    + "operation failures: There cannot be found out the state "
+                    + "of virtual machine " + virtualMachine + ", because its "
+                    + "host machine is not connected.");
         }
         
         NativeVBoxAPIMachine nativeVBoxAPIMachine = new NativeVBoxAPIMachine();
         String vmState;
         try{
             vmState = nativeVBoxAPIMachine.getVMState(virtualMachine);
-        }catch(UnknownVirtualMachineException | UnexpectedVMStateException ex){
-            outputHandler.printErrorMessage(ex.getMessage());
-            return null;
         }catch(ConnectionFailureException ex){
-            outputHandler.printErrorMessage("Connection error occured: There will be stopped "
-                    + "the work with physical machine " + virtualMachine.getHostMachine()
-                    + " and its virtual machines and physical machine will be disconnected -> "
-                    + ex.getMessage());
             connectionManager.disconnectFrom(virtualMachine.getHostMachine());
-            return null;
+            throw ex;
         }
         
         return vmState;
@@ -372,127 +537,99 @@ public class VirtualMachineManagerImpl implements VirtualMachineManager{
         OutputHandler.setErrorOutputStream(stdErrOutput);        
     }
     
-    private boolean isPortRuleValid(PortRule portRule, VirtualMachine virtualMachine){
-        OutputHandler outputHandler = new OutputHandler();
-        
+    private void checkPortRuleIsNull(PortRule portRule, String operation){
         if(portRule == null) {
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a null port rule to the "
-                    + "virtual machine " + virtualMachine + ".");
-            return false;
+            throw new IllegalArgumentException("A null port rule used for " + operation);
         }
-        if(portRule.getName() == null) {
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a new port rule with a null "
-                    + "name to the virtual machine " + virtualMachine + ".");
-            return false;
-        }
-        if(portRule.getName().trim().isEmpty()){
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a new port rule with an empty "
-                    + "name to the virtual machine " + virtualMachine + ".");
-            return false;
-        }
-        if(portRule.getHostPort() <= 0){
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a new port rule with a "
-                    + "negative or zero host port number to the virtual machine " + virtualMachine
-                    + ". Port number can be one from the interval <1;65535>.");
-            return false;
-        }
-        if(portRule.getHostPort() > 65535){
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a new port rule with a "
-                    + "too big host port number to the virtual machine " + virtualMachine
-                    + ". Port number can be one from the interval <1;65535>.");
-            return false;
-        }
-        if(portRule.getGuestPort() <= 0){
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a new port rule with a "
-                    + "negative or zero guest port number to the virtual machine " + virtualMachine
-                    + ". Port number can be one from the interval <1;65535>.");
-            return false;
-        }
-        if(portRule.getGuestPort() > 65535){
-            outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                    + "failure: There was made an attempt to add a new port rule with a "
-                    + "too big guest port number to the virtual machine " + virtualMachine
-                    + ". Port number can be one from the interval <1;65535>.");
-            return false;
-        }
-        
-        //do the final port rule validation steps and return the result
-        return checkPortRuleNameAndHostPortDuplicity(portRule, virtualMachine);
     }
     
-    private boolean checkPortRuleNameAndHostPortDuplicity(PortRule portRule, VirtualMachine virtualMachine){
-        OutputHandler outputHandler = new OutputHandler();
+    private void checkPortRuleName(String name, String operation){
+        if(name == null) {
+            throw new IllegalArgumentException("Port rule with a null name used "
+                    + "for " + operation);
+        }
+        if(name.trim().isEmpty()){
+            throw new IllegalArgumentException("Port rule with an empty name used "
+                    + "for " + operation);
+        }
+    }
+    
+    private void checkPortNumber(int port, String hostGuest, String operation){
+        if(port <= 0){
+            throw new IllegalArgumentException("Port rule with a negative or zero "
+                    + hostGuest + " port number used for " + operation 
+                    + " Port number can be one from the interval <1;65535>.");
+        }
+        if(port > 65535){
+            throw new IllegalArgumentException("Port rule with a too big "
+                    + hostGuest + " port number used for " + operation
+                    + "Port number can be one from the interval <1;65535>.");
+        }
+    }
+    
+    private void validatePortRule(PortRule portRule, String operation,
+            VirtualMachine virtualMachine){
+        
+        checkPortRuleIsNull(portRule, operation);
+        checkPortRuleName(portRule.getName(), operation);
+        checkPortNumber(portRule.getHostPort(), "host", operation);
+        checkPortNumber(portRule.getGuestPort(), "guest", operation);
+        
+        //do the final port rule validation steps and return the result
+        checkPortRuleNameAndHostPortDuplicity(portRule, virtualMachine);
+    }
+    
+    private void checkPortRuleNameAndHostPortDuplicity(PortRule portRule, VirtualMachine virtualMachine){        
+        List<PortRule> registeredPortRules = null;
         //preserve the original output streams for later return to them and do the new set up
         PrintStream origOutStream = OutputHandler.getOutputStream();
-        PrintStream origErrStream = OutputHandler.getErrorOutputStream();
-        final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        setOutputStreams(null, new PrintStream(errContent));
+        PrintStream origErrStream = OutputHandler.getErrorOutputStream();        
+        setOutputStreams(null);
         
-        List<PortRule> registeredPortRules = getPortRules(virtualMachine);
+        try{
+            registeredPortRules = getPortRules(virtualMachine);
+        }catch(UnknownVirtualMachineException ex){
+            throw new UnknownVirtualMachineException("New port-forwarding rule "
+                    + "addition operation failure: There is no virtual machine "
+                    + virtualMachine + " known to VirtualBox. New port-forwarding "
+                    + "rule cannot be added to a nonexistent virtual machine.");
+        }catch(UnexpectedVMStateException ex){
+            throw new UnexpectedVMStateException("New port-forwarding rule addition "
+                    + "operation failure: There cannot be added any port-forwarding "
+                    + "rule to virtual machine " + virtualMachine + ", because "
+                    + "its network adapter is not attached to the required "
+                    + "network adapter of type NAT.");
+        }catch(ConnectionFailureException ex){
+            throw new ConnectionFailureException("New port-forwarding rule addition "
+                    + "operation failure: Unable to connect to the physical machine "
+                    + virtualMachine.getHostMachine() + ". Most probably there "
+                    + "occured one of these problems: 1. Network connection is "
+                    + "not working properly or at all / 2. The VirtualBox web "
+                    + "server is not running / 3. One of the key value (IP address, "
+                    + "number of web server port, username or user password) of "
+                    + "the physical machine has been changed and it is incorrect "
+                    + "now (used value is not the actual correct one).");
+        }        
         
         //set output streams to original streams
         setOutputStreams(origOutStream, origErrStream);
         
         if(!registeredPortRules.isEmpty()){
             for(PortRule regPortRule : registeredPortRules){
-                if(portRule.getName().equals(regPortRule.getName())) {
-                    outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                            + "failure: Port rule cannot be added to the virtual machine, because "
-                            + "there already exists port rule with name = " + portRule.getName()
-                            + " for virtual machine " + virtualMachine + " on physical machine "
-                            + virtualMachine.getHostMachine() + ".");
-                    return false;
+                if(portRule.getName().equals(regPortRule.getName())){
+                    throw new IllegalArgumentException("Port rule cannot be added "
+                            + "to the virtual machine " + virtualMachine + ", "
+                            + "because there already exists port rule with name "
+                            + "\"" + portRule.getName() + "\".");
                 }
                 if(portRule.getHostPort() == regPortRule.getHostPort()) {
-                    outputHandler.printErrorMessage("New port-forwarding rule addition operation "
-                            + "failure: Port rule cannot be added to the virtual machine, because "
-                            + "there already exists port rule using host port number = " + portRule.getHostPort()
-                            + " for virtual machine " + virtualMachine + " on physical machine "
-                            + virtualMachine.getHostMachine() + ".");
-                    return false;
+                    throw new IllegalArgumentException("Port rule cannot be added "
+                            + "to the virtual machine " + virtualMachine + ", "
+                            + "because there already exists port rule using host "
+                            + "port number \"" + portRule.getHostPort() + "\".");
                 }
             }
-        }else{
-            String[] messages = {"New port-forwarding rule addition operation failure: Unable to connect to the physical machine "
-                                    + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working "
-                                    + "properly or at all / 2. The VirtualBox web server is not running / 3. One of the key value (IP address, number of web server port, "
-                                    + "username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
-                                 "New port-forwarding rule addition operation failure: There is no virtual machine " + virtualMachine + " on "
-                                    + "physical machine " + virtualMachine.getHostMachine() + " known to VirtualBox. New port-forwarding rule cannot be added to a nonexistent virtual machine.",
-                                 "New port-forwarding rule addition operation failure: There cannot be added any port-forwarding rule to virtual "
-                                    + "machine " + virtualMachine + ", because its network adapter is not attached to the required network adapter of type NAT."};
-            return isErrorOutputStreamEmpty(errContent.toString(), messages);
         }
-        
-        return true;
-    }
-    
-    private boolean isErrorOutputStreamEmpty(String strErrContent, String[] messages){
-        OutputHandler outputHandler = new OutputHandler();
-        
-        if(!strErrContent.trim().isEmpty()){
-            if(strErrContent.contains("Connection operation failure")){
-                outputHandler.printErrorMessage(messages[0]);
-                return false;
-
-            }
-            if(strErrContent.contains("There is no virtual machine")){
-                outputHandler.printErrorMessage(messages[1]);
-                return false;
-            }
-            if(strErrContent.contains("network adapter")){
-                outputHandler.printErrorMessage(messages[2]);
-                return false;
-            }
-        }
-        
-        return true;
     }
     
     private List<PortRule> getConvertedPortRules(List<String> strPortRules){

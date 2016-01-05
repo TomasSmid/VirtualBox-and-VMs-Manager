@@ -15,7 +15,7 @@
  */
 package cz.muni.fi.virtualtoolmanager.logicimpl;
 
-import cz.muni.fi.virtualtoolmanager.io.OutputHandler;
+import cz.muni.fi.virtualtoolmanager.pubapi.io.OutputHandler;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.SearchCriteria;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
@@ -33,6 +33,8 @@ import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -49,6 +51,9 @@ import org.powermock.modules.junit4.PowerMockRunner;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({SearchManagerImpl.class, VirtualizationToolManagerImpl.class, ConnectionManagerImpl.class})
 public class SearchManagerImplTest {
+    
+    @Rule
+    ExpectedException exception = ExpectedException.none();
     
     private SearchManagerImpl sut;
     private VirtualizationToolManagerImpl vtmMock;
@@ -121,7 +126,7 @@ public class SearchManagerImplTest {
      * machines, then those virtual machines are returned as a result of the method call.
      */
     @Test
-    public void searchPreciselyWithSomeExistentVMsAndSomeMatch(){
+    public void searchPreciselyWithSomeExistingVMsAndSomeMatch(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -185,7 +190,7 @@ public class SearchManagerImplTest {
      * search criterion), and returned an empty list of found VMs.
      */
     @Test
-    public void searchPreciselyWithSomeExistentVMsAndNoMatchAfterFirstSearchCriteriaComparison(){
+    public void searchPreciselyWithSomeExistingVMsAndNoMatchAfterFirstSearchCriteriaComparison(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -242,7 +247,7 @@ public class SearchManagerImplTest {
      * and the different attribute value was found out in the last search round.
      */
     @Test
-    public void searchPreciselyWithSomeExistentVMsAndNoMatchAfterMoreSearchCriteriaComparisons(){
+    public void searchPreciselyWithSomeExistingVMsAndNoMatchAfterMoreSearchCriteriaComparisons(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -296,7 +301,7 @@ public class SearchManagerImplTest {
     }
     
     @Test
-    public void searchPreciselyWithNoExistentVMs(){
+    public void searchPreciselyWithNoExistingVMs(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -338,7 +343,7 @@ public class SearchManagerImplTest {
      * this virtual machine is returned as a result of the search operation.
      */
     @Test
-    public void searchTolerantlyWithSomeExistentVMsAndSomePreciseMatch(){
+    public void searchTolerantlyWithSomeExistingVMsAndSomePreciseMatch(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -404,7 +409,7 @@ public class SearchManagerImplTest {
      * VMs from 4. attempt are not included to the result of search operation.
      */
     @Test
-    public void searchTolerantlyWithSomeExistentVMsAndSomeImpreciseMatchAndCustomizedSearchOrder1(){
+    public void searchTolerantlyWithSomeExistingVMsAndSomeImpreciseMatchAndCustomizedSearchOrder1(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -477,7 +482,7 @@ public class SearchManagerImplTest {
      * not included to the result of search operation.
      */
     @Test
-    public void searchTolerantlyWithSomeExistentVMsAndSomeImpreciseMatchCustomizedSearchOrder2(){
+    public void searchTolerantlyWithSomeExistingVMsAndSomeImpreciseMatchCustomizedSearchOrder2(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -551,7 +556,7 @@ public class SearchManagerImplTest {
      * last successful attempt thus after 3. attempt.
      */
     @Test
-    public void searchTolerantlyWithSomeExistentVMsAndSomeImpreciseMatchCustomizedSearchOrder3(){
+    public void searchTolerantlyWithSomeExistingVMsAndSomeImpreciseMatchCustomizedSearchOrder3(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -623,7 +628,7 @@ public class SearchManagerImplTest {
      * to the result of search operation.
      */
     @Test
-    public void searchTolerantlyWithSomeExistentVMsAndSomeImpreciseMatchAndDefaultSearchOrder1(){
+    public void searchTolerantlyWithSomeExistingVMsAndSomeImpreciseMatchAndDefaultSearchOrder1(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -688,7 +693,7 @@ public class SearchManagerImplTest {
      * in the result of search operation.
      */
     @Test
-    public void searchTolerantlyWithSomeExistentVMsAndSomeImpreciseMatchDefaultSearchOrder2(){
+    public void searchTolerantlyWithSomeExistingVMsAndSomeImpreciseMatchDefaultSearchOrder2(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -753,7 +758,7 @@ public class SearchManagerImplTest {
      * the last 3. attempt there is not found any VM.
      */
     @Test
-    public void searchTolerantlyWithSomeExistentVMsAndSomeImpreciseMatchDefaultSearchOrder3(){
+    public void searchTolerantlyWithSomeExistingVMsAndSomeImpreciseMatchDefaultSearchOrder3(){
         //represent connected physical machines from which are retrieved all virtual machines
         PhysicalMachine pm1 = new PMBuilder().build();
         PhysicalMachine pm2 = new PMBuilder().addressIP("102.10.91.12").build();
@@ -1108,9 +1113,8 @@ public class SearchManagerImplTest {
         //ConnectionManagerImpl::getConnectedPhysicalMachines() is called
         when(conManMock.getConnectedPhysicalMachines()).thenReturn(connectedPMs);
         
-        List<VirtualMachine> actVMs = sut.search(null, SearchMode.ABSOLUTE_EQUALITY, searchOrder);
-        
-        assertTrue("The returned list of VMs should be empty", actVMs.isEmpty());
+        exception.expect(IllegalArgumentException.class);
+        sut.search(null, SearchMode.ABSOLUTE_EQUALITY, searchOrder);
     }
     
     /**
@@ -1142,9 +1146,8 @@ public class SearchManagerImplTest {
         //ConnectionManagerImpl::getConnectedPhysicalMachines() is called
         when(conManMock.getConnectedPhysicalMachines()).thenReturn(connectedPMs);
         
-        List<VirtualMachine> actVMs = sut.search(searchCriteria, SearchMode.ABSOLUTE_EQUALITY, searchOrder);
-        
-        assertTrue("The returned list of VMs should be empty", actVMs.isEmpty());
+        exception.expect(IllegalArgumentException.class);
+        sut.search(searchCriteria, SearchMode.ABSOLUTE_EQUALITY, searchOrder);
     }
     
     /**
@@ -1176,9 +1179,8 @@ public class SearchManagerImplTest {
         //ConnectionManagerImpl::getConnectedPhysicalMachines() is called
         when(conManMock.getConnectedPhysicalMachines()).thenReturn(connectedPMs);
         
-        List<VirtualMachine> actVMs = sut.search(searchCriteria, null, searchOrder);
-        
-        assertTrue("The returned list of VMs should be empty", actVMs.isEmpty());
+        exception.expect(IllegalArgumentException.class);
+        sut.search(searchCriteria, null, searchOrder);
     }
     
     /**
@@ -1615,8 +1617,6 @@ public class SearchManagerImplTest {
         NativeVBoxAPIManager natAPIManMock = mock(NativeVBoxAPIManager.class);
         whenNew(NativeVBoxAPIManager.class).withNoArguments().thenReturn(natAPIManMock);
         ConnectionFailureException conFailExMock = mock(ConnectionFailureException.class);
-        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        OutputHandler.setErrorOutputStream(new PrintStream(errContent));
         
         //there should be returned a list of connected PMs when the method
         //ConnectionManagerImpl::getConnectedPhysicalMachines() is called
@@ -1627,15 +1627,9 @@ public class SearchManagerImplTest {
         doReturn(vmsFromPM1).doReturn(vmsFromPM2).doCallRealMethod().when(vtmMock).getVirtualMachines();
         when(conManMock.isConnected(pm3)).thenReturn(true);
         doThrow(conFailExMock).when(natAPIManMock).getAllVirtualMachines(pm3);
-        when(conFailExMock.getMessage()).thenReturn("Some error message");
         
-        List<VirtualMachine> actVMs = sut.search(searchCriteria, SearchMode.TOLERANT, searchOrder);
-        
-        //checks the expected and the actual found VMs are equal
-        assertDeepVMsEquals(expVMs, actVMs);
-        assertFalse("There should be written any error message on an error output stream",
-                    errContent.toString().isEmpty());
-        OutputHandler.setErrorOutputStream(System.err);
+        exception.expect(ConnectionFailureException.class);
+        sut.search(searchCriteria, SearchMode.TOLERANT, searchOrder);
     }
     
 

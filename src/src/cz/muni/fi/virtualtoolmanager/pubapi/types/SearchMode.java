@@ -16,10 +16,22 @@
 package cz.muni.fi.virtualtoolmanager.pubapi.types;
 
 /**
- *
+ * Enumeration class that is used for determining how precisely the virtual
+ * machine search operation will be performed.
+ * 
+ * @see cz.muni.fi.virtualtoolmanager.pubapi.managers.SearchManager
+ * @see cz.muni.fi.virtualtoolmanager.logicimpl.SearchManagerImpl
+ * 
  * @author Tomáš Šmíd
  */
 public enum SearchMode {
+    /** Represents the search mode in which must the searched virtual machine 
+     * be completely the same as that specified and required by search criteria,
+     * with this search mode does not matter on the search order (priority)*/
     ABSOLUTE_EQUALITY,
+    /** Represents the search mode in which the searched virtual machine has not
+     * to be precisely the same as that specified and required by search criteria,
+     * as the result of this search mode are searched those virtual machines,
+     * which utmost match the search criteria */
     TOLERANT
 }

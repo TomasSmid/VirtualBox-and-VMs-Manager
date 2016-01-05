@@ -19,7 +19,7 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  *
  * @author Tomáš Šmíd
  */
-public class UnknownVirtualMachineException extends Exception{
+public class UnknownVirtualMachineException extends RuntimeException{
     
     public UnknownVirtualMachineException(){
         super();

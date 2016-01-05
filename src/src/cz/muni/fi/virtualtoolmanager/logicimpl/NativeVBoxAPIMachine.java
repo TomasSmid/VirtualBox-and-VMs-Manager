@@ -43,22 +43,40 @@ import org.virtualbox_4_3.VirtualBoxManager;
 
 
 /**
- *
+ * Class that is used to call the native methods from VirtualBox API to ensure
+ * performing of operations associated with one virtual machine like starting
+ * operation.
+ * 
+ * @see cz.muni.fi.virtualtoolmanager.logicimpl.VirtualMachineManagerImpl
+ * 
  * @author Tomáš Šmíd
  */
 class NativeVBoxAPIMachine {
     
     /**
-     * 
-     * 
-     * @param virtualMachine
-     * @throws ConnectionFailureException
-     * @throws UnknownVirtualMachineException
-     * @throws UnexpectedVMStateException 
+     * This method starts a particular virtual machine with the specified
+     * front-end type. All the parameters validation is done in manager class
+     * {@link cz.muni.fi.virtualtoolmanager.logicimpl.VirtualMachineManagerImpl
+     * VirtualMachineManagerImpl}.
+     * If there occurs any error there can be thrown one of the following
+     * exceptions:
+     * 1)ConnectionFailureException - thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved
+     * 2)UnknownVirtualMachineException - thrown when the given virtual machine
+     * is being retrieved (native object of VirtualBox virtual machine) from
+     * remote physical machine, but that virtual machine does not exist (is not
+     * registered at the VirtualBox hypervisor) on the remote physical machine
+     * 3)UnexpectedVMStateException - thrown when the virtual machine cannot be
+     * accessed (e.g. corrupted configuration files) or when the virtual machine
+     * is in a not required state ("running","paused") for starting operation or
+     * the starting operation is aborted because of the another process which
+     * is using the virtual machine at the same moment.
+     * @param virtualMachine represents the virtual machine which is going to be
+     * started
      */
-    public void startVM(VirtualMachine virtualMachine, FrontEndType frontEndType) throws ConnectionFailureException,
-                                                                                         UnknownVirtualMachineException,
-                                                                                         UnexpectedVMStateException { 
+    public void startVM(VirtualMachine virtualMachine, FrontEndType frontEndType){ 
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
         int[] errMsgNum = {0, 1};
@@ -96,6 +114,7 @@ class NativeVBoxAPIMachine {
         String type = frontEndType.toString().toLowerCase();
         try{
             IProgress progress = vboxMachine.launchVMProcess(session, type, "");
+            //wait while the starting operation is finished
             while(!progress.getCompleted()){
                 virtualBoxManager.waitForEvents(0l);
                 progress.waitForCompletion(200);
@@ -106,8 +125,8 @@ class NativeVBoxAPIMachine {
                     //just loop until the condition is true
                 } 
             }else{                
-                //operation was not finished successfully, unlock machine and do the clean up after performed operation(s)
-                //session.unlockMachine();                
+                //operation was not finished successfully, unlock machine and do 
+                //the clean up after performed operation(s)
                 virtualBoxManager.disconnect();
                 virtualBoxManager.cleanup();
                 throw new UnexpectedVMStateException(getErrorMessage(4, virtualMachine));               
@@ -129,16 +148,32 @@ class NativeVBoxAPIMachine {
     }
     
     /**
-     * 
-     * 
-     * @param virtualMachine
-     * @throws ConnectionFailureException
-     * @throws UnknownVirtualMachineException
-     * @throws UnexpectedVMStateException 
+     * This method shuts down a particular virtual machine. The implemented
+     * shutdown operation is equivalent to powering off the computer from the
+     * the plug socket, so the operations processed in the moment of this method
+     * call are not finished and there can be lost data, but it is much more
+     * faster then using the power button access.
+     * All the parameters validation is done in manager class
+     * {@link cz.muni.fi.virtualtoolmanager.logicimpl.VirtualMachineManagerImpl
+     * VirtualMachineManagerImpl}.
+     * If there occurs any error there can be thrown one of the following
+     * exceptions:
+     * 1)ConnectionFailureException - thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved
+     * 2)UnknownVirtualMachineException - thrown when the given virtual machine
+     * is being retrieved (native object of VirtualBox virtual machine) from
+     * remote physical machine, but that virtual machine does not exist (is not
+     * registered at the VirtualBox hypervisor) on the remote physical machine
+     * 3)UnexpectedVMStateException - thrown when the virtual machine cannot be
+     * accessed (e.g. corrupted configuration files) or when the virtual machine
+     * is not in a required state ("running", "paused", "stuck") for shutdown
+     * operation or the shutdown operation was not finished successfully
+     * @param virtualMachine represents the virtual machine which is going to be
+     * shut down
      */
-    public void shutDownVM(VirtualMachine virtualMachine) throws ConnectionFailureException,
-                                                                 UnknownVirtualMachineException,
-                                                                 UnexpectedVMStateException {
+    public void shutDownVM(VirtualMachine virtualMachine){
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
         int[] errMsgNum = {6, 7};
@@ -175,7 +210,8 @@ class NativeVBoxAPIMachine {
         //all conditions for VM shutdown are met - VM can be shut down
         ISession session = virtualBoxManager.getSessionObject();
         //process which ensures VM shutdown must firstly lock the VM for itself
-        //(not using the exclusive lock, just shared - if there exists another process which locked VM for itself)
+        //(not using the exclusive lock, just shared - if there exists another 
+        //process which locked VM for itself)
         vboxMachine.lockMachine(session, LockType.Shared);
         IConsole console = session.getConsole();
         //shut the VM down
@@ -186,11 +222,13 @@ class NativeVBoxAPIMachine {
         }
         
         try{
-            //release the VM for another processes and wait while the VM is definitively powered down and unlocked
+            //release the VM for another processes and wait while the VM is 
+            //definitively powered down and unlocked
             session.unlockMachine();
         }catch(VBoxException ex){
-            //machine has already been unlocked -> second attempt to unlock unlocked machine invoked exception -
-            //- after powerDown() operation had finished the session unlocked machine, the call session.unlockMachine()
+            //machine has already been unlocked -> second attempt to unlock 
+            //unlocked machine invoked exception - after powerDown() operation 
+            //had finished the session unlocked machine, the call session.unlockMachine()
             //is performed for sure in order to ensure that the machine surely would not stay locked
         }
         while(session.getState() != SessionState.Unlocked){
@@ -219,17 +257,26 @@ class NativeVBoxAPIMachine {
     }
     
     /**
-     * 
-     * 
-     * @param virtualMachine
-     * @param portRule
-     * @throws ConnectionFailureException
-     * @throws UnknownVirtualMachineException
-     * @throws UnexpectedVMStateException 
+     * This method adds new port-forwarding rule to a particular virtual machine.
+     * The given port rule must have a unique name on the virtual machine and
+     * the host port number must not be used by another existing port rule.
+     * If there occurs any error there can be thrown one of the following
+     * exceptions:
+     * 1)ConnectionFailureException - thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved
+     * 2)UnknownVirtualMachineException - thrown when the given virtual machine
+     * is being retrieved (native object of VirtualBox virtual machine) from
+     * remote physical machine, but that virtual machine does not exist (is not
+     * registered at the VirtualBox hypervisor) on the remote physical machine
+     * 3)UnexpectedVMStateException - thrown when the virtual machine is not
+     * attached to the NAT network adapter -> no port-forwarding can be done
+     * @param virtualMachine represents the virtual machine to which will be added
+     * a new port-forwarding rule
+     * @param portRule represents a new port-forwarding rule
      */
-    public void addPortRule(VirtualMachine virtualMachine, PortRule portRule) throws ConnectionFailureException,
-                                                                                     UnknownVirtualMachineException,
-                                                                                     UnexpectedVMStateException {
+    public void addPortRule(VirtualMachine virtualMachine, PortRule portRule){
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
         int[] errMsgNum = {11, 12};
@@ -268,11 +315,28 @@ class NativeVBoxAPIMachine {
         virtualBoxManager.cleanup();
     }
     
-    
-    public void deletePortRule(VirtualMachine virtualMachine, String ruleName) throws ConnectionFailureException,
-                                                                                      UnknownVirtualMachineException,
-                                                                                      UnknownPortRuleException,
-                                                                                      UnexpectedVMStateException {
+    /**
+     * This method deletes existing port-forwarding rule from a particular virtual
+     * machine.
+     * If there occurs any error there can be thrown one of the following
+     * exceptions:
+     * 1)ConnectionFailureException - thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved
+     * 2)UnknownVirtualMachineException - thrown when the given virtual machine
+     * is being retrieved (native object of VirtualBox virtual machine) from
+     * remote physical machine, but that virtual machine does not exist (is not
+     * registered at the VirtualBox hypervisor) on the remote physical machine
+     * 3)UnexpectedVMStateException - thrown when the virtual machine is not
+     * attached to the NAT network adapter -> no port-forwarding can be done
+     * 4)UnknownPortRuleException - thrown when there is made an attempt to
+     * delete a non-existent port-forwarding rule
+     * @param virtualMachine represents the virtual machine from which will be
+     * deleted a port-forwarding rule
+     * @param ruleName  represents a port-forwarding rule which will be deleted
+     */
+    public void deletePortRule(VirtualMachine virtualMachine, String ruleName){
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
         int[] errMsgNum = {14, 15};
@@ -314,9 +378,27 @@ class NativeVBoxAPIMachine {
         virtualBoxManager.cleanup();
     }
     
-    public List<String> getPortRules(VirtualMachine virtualMachine) throws ConnectionFailureException,
-                                                                           UnknownVirtualMachineException,
-                                                                           UnexpectedVMStateException {
+    /**
+     * This method gets all existing port-forwarding rules of a particular
+     * virtual machine.
+     * If there occurs any error there can be thrown one of the following
+     * exceptions:
+     * 1)ConnectionFailureException - thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved
+     * 2)UnknownVirtualMachineException - thrown when the given virtual machine
+     * is being retrieved (native object of VirtualBox virtual machine) from
+     * remote physical machine, but that virtual machine does not exist (is not
+     * registered at the VirtualBox hypervisor) on the remote physical machine
+     * 3)UnexpectedVMStateException - thrown when the virtual machine is not
+     * attached to the NAT network adapter -> no port-forwarding can be done
+     * @param virtualMachine represents the virtual machine from which will be
+     * retrieved all port-forwarding rules
+     * @return list of all existing port-forwarding rules associated with the
+     * given virtual machine
+     */
+    public List<String> getPortRules(VirtualMachine virtualMachine){
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
         int[] errMsgNum = {18, 19};
@@ -349,9 +431,27 @@ class NativeVBoxAPIMachine {
         return redirects;
     }
     
-    public String getVMState(VirtualMachine virtualMachine) throws ConnectionFailureException,
-                                                                   UnknownVirtualMachineException,
-                                                                   UnexpectedVMStateException{
+    /**
+     * This method gets the actual state of a particular virtual machine.
+     * The given port rule must have a unique name on the virtual machine and
+     * the host port number must not be used by another existing port rule.
+     * If there occurs any error there can be thrown one of the following
+     * exceptions:
+     * 1)ConnectionFailureException - thrown when there occured any connection
+     * problem (invalid physical machine attribute values, not running web server,
+     * network connection not working properly or at all) when the native VirtualBox
+     * manager object is being retrieved
+     * 2)UnknownVirtualMachineException - thrown when the given virtual machine
+     * is being retrieved (native object of VirtualBox virtual machine) from
+     * remote physical machine, but that virtual machine does not exist (is not
+     * registered at the VirtualBox hypervisor) on the remote physical machine
+     * 3)UnexpectedVMStateException - thrown when the virtual machine cannot be
+     * accessed (e.g. corrupted configuration files)
+     * @param virtualMachine represents the virtual machine to which will be added
+     * a new port-forwarding rule
+     * @return actual virtual machine state as string
+     */
+    public String getVMState(VirtualMachine virtualMachine){
         VirtualBoxManager virtualBoxManager = VirtualBoxManager.createInstance(null);
         IMachine vboxMachine = null;
         int[] errMsgNum = {21, 22};
@@ -387,6 +487,12 @@ class NativeVBoxAPIMachine {
         return vmState;
     }
     
+    /**
+     * Gets the error message placed in array of messages on a given index.
+     * @param index index of a required error message in array
+     * @param virtualMachine actually used virtual machine
+     * @return the required error message
+     */
     private String getErrorMessage(int index, VirtualMachine virtualMachine){
         String[] errMessages = /* 00 */{"Connection operation failure while trying to start the virtual machine " + virtualMachine + ": Unable to connect to the physical machine " + virtualMachine.getHostMachine() + ". Most probably there occured one of these problems: 1. Network connection is not working properly or at all / 2. The VirtualBox web "
                                         + " server is not running / 3. One of the key value (IP address, number of web server port, username or user password) of the physical machine has been changed and it is incorrect now (used value is not the actual correct one).",
@@ -422,9 +528,16 @@ class NativeVBoxAPIMachine {
         return errMessages[index];
     }
     
-    private IMachine getVBoxMachine(VirtualBoxManager virtualBoxManager, VirtualMachine virtualMachine,
-                                    int[] errMsgNum) throws ConnectionFailureException,
-                                                            UnknownVirtualMachineException{
+    /**
+     * Retrieves the native VirtualBox virtual machine instance which can be used
+     * for further processing. 
+     * @param virtualBoxManager native VirtualBox manager
+     * @param virtualMachine virtual machine whose native instance should be retrieved
+     * @param errMsgNum array of integers determining the error messages
+     * @return native VirtualBox virtual machine instance
+     */
+    private IMachine getVBoxMachine(VirtualBoxManager virtualBoxManager,
+            VirtualMachine virtualMachine, int[] errMsgNum){
         String url = getURL(virtualMachine.getHostMachine());
         String username = virtualMachine.getHostMachine().getUsername();
         String userPassword = virtualMachine.getHostMachine().getUserPassword();
@@ -452,6 +565,16 @@ class NativeVBoxAPIMachine {
         return vboxMachine;
     }
     
+    /**
+     * This method creates the correct form of url from the given IP address
+     * and the port number of the VirtualBox web server. Thanks this method
+     * it is possible to connect to the physical machine and its VirtualBox
+     * web server with IPv4 or IPv6.
+     * 
+     * @param physicalMachine represents the physical machine whose IP address
+     * and port number of VirtualBox web server will be used for new url creation
+     * @return newly created url defining the physical machine
+     */
     private String getURL(PhysicalMachine physicalMachine){
         if(physicalMachine.getAddressIP().contains(".")){
             return "http://" + physicalMachine.getAddressIP() + ":"

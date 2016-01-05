@@ -16,10 +16,17 @@
 package cz.muni.fi.virtualtoolmanager.pubapi.types;
 
 /**
- *
+ * Enumeration class that is used for determining what protocol should be used
+ * for traffic during port-forwarding.
+ * 
+ * @see cz.muni.fi.virtualtoolmanager.pubapi.entities.PortRule
+ * @see cz.muni.fi.virtualtoolmanager.logicimpl.VirtualMachineManagerImpl
+ * 
  * @author Tomáš Šmíd
  */
 public enum ProtocolType {
+    /** Represents TCP protocol type */
     TCP,
+    /** Represents UDP protocol type */
     UDP
 }

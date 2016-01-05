@@ -75,13 +75,9 @@ public class NativeVBoxAPIConnectionTest {
      * This test tests that there is not unexpectedly invoked any exception when
      * the method NativeVBoxAPIConnection::connect() is called with a valid and
      * existing input parameter of type PhysicalMachine.
-     * 
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToValidExistingPhysicalMachine() throws ConnectionFailureException,
-                                                               IncompatibleVirtToolAPIVersionException{
+    public void connectToValidExistingPhysicalMachine() {
         //represents a physical machine to which should manage to connect to
         PhysicalMachine pm = new PMBuilder().build();
         String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();         
@@ -107,13 +103,9 @@ public class NativeVBoxAPIConnectionTest {
      * IP address, web server port of VirtualBox and user password, but with
      * incorrect username (with the condition that for the web server port was used
      * this setting: "vboxmanage setproperty websrvauthlibrary default").
-     * 
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToExistingPhysicalMachineWithIncorrectUsername() throws ConnectionFailureException,
-                                                                               IncompatibleVirtToolAPIVersionException{
+    public void connectToExistingPhysicalMachineWithIncorrectUsername(){
         //represents physical machine having incorrect username for its IP address
         PhysicalMachine incoPM = new PMBuilder().build();
         //represents physical machine having correct username for its IP address
@@ -137,13 +129,9 @@ public class NativeVBoxAPIConnectionTest {
      * connect to physical machine with correct (existing) IP address, web server port of VirtualBox and
      * username, but with incorrect user password (with the condition that for the web server port was used
      * this setting: "vboxmanage setproperty websrvauthlibrary default").
-     * 
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToExistingPhysicalMachineWithIncorrectUserPassword() throws ConnectionFailureException,
-                                                                                   IncompatibleVirtToolAPIVersionException{
+    public void connectToExistingPhysicalMachineWithIncorrectUserPassword(){
         //represents physical machine having incorrect user password for its IP address
         PhysicalMachine incoPM = new PMBuilder().build();
         //represents physical machine having correct user password for its IP address
@@ -166,13 +154,9 @@ public class NativeVBoxAPIConnectionTest {
      * Tests that there is ConnectionFailureException exception invoked when there is made an attempt to
      * connect to a physical machine with not existing IP address in network or with incorrect number of
      * web server port of VirtualBox.
-     * 
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToNotExistingPhysicalMachine() throws ConnectionFailureException,
-                                                             IncompatibleVirtToolAPIVersionException{
+    public void connectToNotExistingPhysicalMachine(){
         //represents a physical machine with which should be the connection established
         PhysicalMachine pm = new PMBuilder().build();
         //if the method VirtualBoxManager::connect() is called with physical machine pm, then it will
@@ -188,13 +172,9 @@ public class NativeVBoxAPIConnectionTest {
     /**
      * Tests that there is ConnectionFailureException exception invoked when the connection with physical
      * machine is not successfully established after 3 attempts.
-     * 
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
-     * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
      */
     @Test
-    public void connectToInaccessiblePhysicalMachine() throws ConnectionFailureException,
-                                                              IncompatibleVirtToolAPIVersionException{
+    public void connectToInaccessiblePhysicalMachine(){
         //represents a physical machine with which should be established the connection
         PhysicalMachine pm = new PMBuilder().build();
         String url = "http://" + pm.getAddressIP() + ":" + pm.getPortOfVTWebServer();
@@ -211,13 +191,9 @@ public class NativeVBoxAPIConnectionTest {
     /**
     * Tests that there is IncompatibleVirtToolAPIVersionException exception invoked when API version
     * of VirtualBox does not match the required version.
-    * 
-    * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.ConnectionFailureException
-    * @throws cz.muni.fi.virtualtoolmanager.pubapi.exceptions.IncompatibleVirtToolAPIVersionException
     */
     @Test
-    public void connectToWithIncompatibleVBoxAPIVersion() throws ConnectionFailureException,
-                                                                 IncompatibleVirtToolAPIVersionException{
+    public void connectToWithIncompatibleVBoxAPIVersion(){
         //represents a physical machine with which should be established a connection
         PhysicalMachine pm = new PMBuilder().build();
         //mock object of type IVirtualBox for easier and faster testing

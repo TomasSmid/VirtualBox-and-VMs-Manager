@@ -15,7 +15,6 @@
  */
 package cz.muni.fi.virtualtoolmanager.logicimpl;
 
-import cz.muni.fi.virtualtoolmanager.io.OutputHandler;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.PhysicalMachine;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.SearchCriteria;
 import cz.muni.fi.virtualtoolmanager.pubapi.entities.VirtualMachine;
@@ -32,28 +31,74 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- *
+ * Class that provide the implementation of methods declared in
+ * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.SearchManager
+ * SearchManager}.
+ * 
  * @author Tomáš Šmíd
  */
 public class SearchManagerImpl implements SearchManager{
 
+    /** Represents the maximum deviation which is used for both search modes and
+     * for hard disks values and memory and video memory, thanks to this attribute
+     * there it is possible to match some virtual machine which does not have
+     * the precise required value of a particular attribute, but it was relatively
+     * close */
     private int maxDeviation;
     
+    /**
+     * The first constructor of this class. In this constructor is deviation
+     * attribute set to zero.
+     */
     public SearchManagerImpl(){
         this(0);
     }
     
+    /**
+     * The second constructor of the class. In this constructor is deviation
+     * set to passed in value.
+     * @param deviation represents the deviation which will be used for searching
+     */
     public SearchManagerImpl(int deviation){
         checkAndSetMaxDeviation(deviation);
     }
     
+    /**
+     * <div>
+     * Method that implements the method
+     * {@link cz.muni.fi.virtualtoolmanager.pubapi.managers.SearchManager#search(SearchCriteria, SearchMode, List)
+     * SearchManager::search(SearchCriteria, SearchMode, List)}.
+     * </div>
+     * <div>     
+     * Search order (priority) of the search criteria take the effect only
+     * in mode tolerant in which the order of searched properties can be very
+     * important. It is not necessary to define search order for all properties,
+     * only for the chosen. The remaining search criterion which were not included
+     * in client search order will be ordered according to implicit setting and
+     * appended to the explicitly set up search order. If the search order is not
+     * specified, then there will be used the whole default search order.
+     * If there occurs any error, then there can be thrown the following exceptions:
+     * <ul>
+     * <li><strong>IllegalArgumentException - </strong>thrown when the given
+     * search criteria or search mode are <code>null</code> or search criteria
+     * has no specified attribute or there was used illegal search mode
+     * </ul>
+     * </div>
+     * @param searchCriteria defines what properties must have the searched
+     * virtual machine
+     * @param mode defines how precise the searching will be used
+     * @param searchOrder defines the priority of each search criterion
+     * @return list of matched virtual machines
+     */
     @Override
     public List<VirtualMachine> search(SearchCriteria searchCriteria, SearchMode mode,
                                        List<SearchCriterionType> searchOrder) {
         ConnectionManager connectionManager = new ConnectionManagerImpl();        
         
-        if(connectionManager.getConnectedPhysicalMachines().isEmpty() ||
-                !isSearchCriteriaValid(searchCriteria) || !isSearchModeValid(mode)){
+        validateSearchCriteria(searchCriteria);
+        validateSearchMode(mode);
+        
+        if(connectionManager.getConnectedPhysicalMachines().isEmpty()){
             return new ArrayList<>();
         }
         
@@ -84,20 +129,21 @@ public class SearchManagerImpl implements SearchManager{
     private void checkAndSetMaxDeviation(int deviation){
         if(deviation >= 0 && deviation <= 100){
             this.maxDeviation = deviation;
+        }else{
+            this.maxDeviation = 0;
         }
     }
     
-    private boolean isSearchCriteriaValid(SearchCriteria searchCriteria){
-        OutputHandler outputHandler = new OutputHandler();
-        
+    private void validateSearchCriteria(SearchCriteria searchCriteria){
         if(searchCriteria == null){
-            outputHandler.printErrorMessage("Virtual machine search operation failure: "
-                    + "There was made an attempt to search required virtual machines by "
-                    + "null search criteria.");
-            return false;
+            throw new IllegalArgumentException("A null search criteria used for "
+                    + "virtual machine search operation.");
         }
-        
-        return hasAnySpecifiedParameter(searchCriteria);
+                
+        if(!hasAnySpecifiedParameter(searchCriteria)){
+            throw new IllegalArgumentException("No search criteria specified for "
+                    + "virtual machine search operation.");
+        }
     }
     
     private boolean hasAnySpecifiedParameter(SearchCriteria searchCriteria){
@@ -160,22 +206,20 @@ public class SearchManagerImpl implements SearchManager{
         return false;
     }
     
-    private boolean isSearchModeValid(SearchMode searchMode){
-        OutputHandler outputHandler = new OutputHandler();
-        
+    private void validateSearchMode(SearchMode searchMode){
         if(searchMode == null){
-            outputHandler.printErrorMessage("Virtual machine search operation failure: "
-                    + "There was made an attempt to search virtual machines with a null "
-                    + "search mode.");
-            return false;
+            throw new IllegalArgumentException("A null search mode used for "
+                    + "virtual machine search operation.");
         }
         switch(searchMode){
             case ABSOLUTE_EQUALITY :
-            case TOLERANT          : return true;
-            default                : throw new IllegalStateException("Illegal enumeration literal occured: "
-                    + "During the virtual machine search operation there occured an illegal "
-                    + "enumeration literal of type SearchMode \"" + searchMode.toString() + "\", "
-                    + "but the allowed enumeration literals are only \"PRECISE\" and \"TOLERANT\".");
+            case TOLERANT          : break;
+            default                : throw new IllegalArgumentException("Illegal "
+                    + "enumeration literal used for virtual machine search "
+                    + "operation. There was used enumeration literal of type "
+                    + "SearchMode \"" + searchMode.toString() + "\", but the "
+                    + "allowed enumeration literals are only \"ABSOLUTE_EQUALITY\" "
+                    + "and \"TOLERANT\".");
         }
     }
     
@@ -184,14 +228,6 @@ public class SearchManagerImpl implements SearchManager{
         ConnectionManager connectionManager = new ConnectionManagerImpl();
         int index = 0;
         int numOfPMs = connectionManager.getConnectedPhysicalMachines().size();
-        
-        /*for(PhysicalMachine physicalMachine : connectedPMs){
-            VirtualizationToolManager virtualizationToolManager = new VirtualizationToolManagerImpl(physicalMachine);
-            List<VirtualMachine> tempVMs = virtualizationToolManager.getVirtualMachines();
-            if(!tempVMs.isEmpty()){
-                virtualMachines.addAll(tempVMs);
-            }
-        }*/
         
         do{
             PhysicalMachine physicalMachine = connectionManager.getConnectedPhysicalMachines().get(index);
@@ -232,13 +268,13 @@ public class SearchManagerImpl implements SearchManager{
                     case VRAM          :
                     case MONITOR_COUNT : retValue = true;
                                          break;
-                    default            : throw new IllegalStateException("Illegal "
-                            + "enumeration literal: During virtual machine search operation "
-                            + "there was used an illegal enumeration literal of type "
-                            + "SearchCriterionType. The allowed values are: \"ID\", \"NAME\", "
-                            + "\"OS_TYPE\", \"OS_IDENTIFIER\", \"CPU_COUNT\", \"CPU_EXEC_CAP\", "
-                            + "\"HDD_FREE_SPACE\", \"HDD_TOTAL_SIZE\", \"RAM\", \"VRAM\", "
-                            + "\"MONITOR_COUNT\".");
+                    default            : throw new IllegalArgumentException("Illegal "
+                            + "enumeration literal of type SearchCriterionType "
+                            + "used for virtual machine search operation. The "
+                            + "allowed values are: \"ID\", \"NAME\", \"OS_TYPE\""
+                            + ", \"OS_IDENTIFIER\", \"CPU_COUNT\", \"CPU_EXEC_CAP\""
+                            + ", \"HDD_FREE_SPACE\", \"HDD_TOTAL_SIZE\", \"RAM\""
+                            + ", \"VRAM\", \"MONITOR_COUNT\".");
                 }
             }
         }

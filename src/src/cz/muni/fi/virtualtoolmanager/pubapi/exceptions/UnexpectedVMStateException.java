@@ -19,7 +19,7 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  *
  * @author Tomáš Šmíd
  */
-public class UnexpectedVMStateException extends Exception{
+public class UnexpectedVMStateException extends RuntimeException{
     
     public UnexpectedVMStateException(){
         super();

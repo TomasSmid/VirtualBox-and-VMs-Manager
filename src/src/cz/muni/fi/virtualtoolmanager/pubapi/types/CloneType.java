@@ -16,12 +16,25 @@
 package cz.muni.fi.virtualtoolmanager.pubapi.types;
 
 /**
- *
+ * Enumeration class that is used for determining what type of virtual machine
+ * clone should be created.
+ * 
+ * @see cz.muni.fi.virtualtoolmanager.pubapi.managers.VirtualizationToolManager
+ * @see cz.muni.fi.virtualtoolmanager.logicimpl.VirtualizationToolManagerImpl
+ * 
  * @author Tomáš Šmíd
  */
 public enum CloneType {
+    /** Virtual machine clone is created as full clone just from the actual 
+     * state of original virtual machine*/
     FULL_FROM_MACHINE_STATE,
+    /** Virtual machine clone is created as full clone from the actual state 
+     * of the original virtual machine and its child states */
     FULL_FROM_MACHINE_AND_CHILD_STATES,
+    /** Virtual machine clone is created as full clone from all states of the
+     * original virtual machine */
     FULL_FROM_ALL_STATES,
+    /** Virtual machine clone is created as a linked clone of the original
+     * virtual machine */
     LINKED
 }

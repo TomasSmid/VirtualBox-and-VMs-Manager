@@ -19,7 +19,7 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  *
  * @author Tomáš Šmíd
  */
-public class ConnectionFailureException extends Exception{
+public class ConnectionFailureException extends RuntimeException{
     
     public ConnectionFailureException(){
         super();

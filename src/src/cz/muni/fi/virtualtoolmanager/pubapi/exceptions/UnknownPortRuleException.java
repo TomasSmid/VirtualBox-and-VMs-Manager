@@ -19,7 +19,7 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  *
  * @author Tomáš Šmíd
  */
-public class UnknownPortRuleException extends Exception{
+public class UnknownPortRuleException extends RuntimeException{
     
     public UnknownPortRuleException(){
         super();

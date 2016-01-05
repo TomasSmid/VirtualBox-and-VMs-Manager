@@ -20,20 +20,39 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
+ * Class that is used to hold overview about the all connected physical machines.
+ * It is inspired by the singleton pattern, but in this case it is not singleton -
+ * - it uses static builder factory, but also it has one attribute except the
+ * instance attribute. But in a time, there always exists just one instance
+ * of this class.
+ * 
  * @author Tomáš Šmíd
  */
-public class ConnectedPhysicalMachines {
-    
+class ConnectedPhysicalMachines {
+    /** The only instance of this class*/
     private static final ConnectedPhysicalMachines INSTANCE = new ConnectedPhysicalMachines();
+    /** list of all connected physical machines */
     private List<PhysicalMachine> connectedPhysicalMachines = new ArrayList<>();
     
+    /**
+     * This method represents so called static builder factory, which is used to
+     * get the instance of this class.
+     * @return object of type of this class
+     */
     public static ConnectedPhysicalMachines getInstance(){
         return INSTANCE;
     }
     
     private ConnectedPhysicalMachines(){ }
     
+    /**
+     * This method adds a new physical machine to the list of connected physical
+     * machines.
+     * If there occurs any error it can throw the following exceptions:
+     *  • IllegalArgumentException - when the given physical machine is null
+     * @param physicalMachine represents the physical machines which is going to
+     * be added to the list of connected physical machines
+     */
     public void add(PhysicalMachine physicalMachine){
         if(physicalMachine == null){
             throw new IllegalArgumentException("There was made an attempt to add "
@@ -44,6 +63,16 @@ public class ConnectedPhysicalMachines {
         connectedPhysicalMachines.add(physicalMachine);
     }
     
+    /**
+     * This method removes a particular physical machine from the list of
+     * connected physical machines.
+     * If there occurs any error it can throw the following exceptions:
+     *  • IllegalArgumentException - when the given physical machine is null
+     * @param physicalMachine represents the physical machine which is going to
+     * be removed from the list of connected physical machines
+     * @return true if the physical machine was present in the list and was 
+     * removed successfully, false otherwise
+     */
     public boolean remove(PhysicalMachine physicalMachine){
         if(physicalMachine == null){
             throw new IllegalArgumentException("There was made an attempt to remove "
@@ -54,6 +83,13 @@ public class ConnectedPhysicalMachines {
         return connectedPhysicalMachines.remove(physicalMachine);
     }
     
+    /**
+     * This method checks the physical machine is present in the list of
+     * connected physical machines.
+     * @param physicalMachine represents a queried physical machine
+     * @return true if the physical machine is one of the connected physical
+     * machines, false otherwise
+     */
     public boolean isConnected(PhysicalMachine physicalMachine){
         if(physicalMachine == null){
             throw new IllegalArgumentException("There was made an attempt to find "
@@ -63,6 +99,10 @@ public class ConnectedPhysicalMachines {
         return connectedPhysicalMachines.contains(physicalMachine);
     }
     
+    /**
+     * Gets the list of all connected physical machines.
+     * @return list of all connected physical machines
+     */
     public List<PhysicalMachine> getConnectedPhysicalMachines(){
         return connectedPhysicalMachines;
     }

@@ -15,7 +15,7 @@
  */
 package cz.muni.fi.virtualtoolmanager.io;
 
-import cz.muni.fi.virtualtoolmanager.io.OutputHandler;
+import cz.muni.fi.virtualtoolmanager.pubapi.io.OutputHandler;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import org.junit.After;

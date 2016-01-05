@@ -19,7 +19,7 @@ package cz.muni.fi.virtualtoolmanager.pubapi.exceptions;
  *
  * @author Tomáš Šmíd
  */
-public class IncompatibleVirtToolAPIVersionException extends Exception{
+public class IncompatibleVirtToolAPIVersionException extends RuntimeException{
     
     public IncompatibleVirtToolAPIVersionException(){
         super();

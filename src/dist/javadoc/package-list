@@ -1,0 +1,6 @@
+cz.muni.fi.virtualtoolmanager.logicimpl
+cz.muni.fi.virtualtoolmanager.pubapi.entities
+cz.muni.fi.virtualtoolmanager.pubapi.exceptions
+cz.muni.fi.virtualtoolmanager.pubapi.io
+cz.muni.fi.virtualtoolmanager.pubapi.managers
+cz.muni.fi.virtualtoolmanager.pubapi.types

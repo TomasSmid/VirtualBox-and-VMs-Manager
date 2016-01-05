@@ -16,10 +16,18 @@
 package cz.muni.fi.virtualtoolmanager.pubapi.types;
 
 /**
- *
+ * Enumeration class that is used for determining what final actions should be
+ * performed before the physical machine is disconnected.
+ * 
+ * @see cz.muni.fi.virtualtoolmanager.pubapi.managers.ConnectionManager
+ * @see cz.muni.fi.virtualtoolmanager.logicimpl.ConnectionManagerImpl
+ * 
  * @author Tomáš Šmíd
  */
 public enum ClosingActionType {
+    /** No special actions specified */
     NONE,
+    /** Before the physical machine is disconnected, all running virtual machines
+     * should be shut down */
     SHUT_DOWN_RUNNING_VM
 }
